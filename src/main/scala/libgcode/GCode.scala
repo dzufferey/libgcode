@@ -14,7 +14,7 @@ import CmdType._
 import ParamType._
 
 // each line is a command
-case class Command( ctype: CmdType,              // G/M/O, Empty means it is a comment only
+case class Command( ctype: CmdType,             // G/M/O, Empty means it is a comment only
                     code: Seq[Int],             // code X.Y corresponds to Seq(X, Y)
                     parameters: Seq[Param],     // parameters
                     line: Option[Int],          // line number (optional)

@@ -17,18 +17,13 @@ For instance:
 * `case G(1.5, X(var1) :: remainingParams ) => ...`.
 * ...
 
-#### Transducer
+#### Examples of Transformers/Transducers
 
-A few classes of g-code transformers.
-Sample transformers:
+A few sample classes of g-code transformers:
 * remove comments
 * change unit (inch to mm and return)
 * scale, translate, rotate
 * circular motion to segments (given a maximal acceptable error)
-
-A class of transducer (on-the-fly transformer).
-A transducer read one command, transforms it, and printer the result.
-It does not keep anything in memory.
 
 #### Abstract Machine
 

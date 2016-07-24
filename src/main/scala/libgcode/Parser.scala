@@ -1,6 +1,7 @@
 package libgcode
 
 import fastparse.all._
+import fastparse.core.Parsed
 import CmdType.CmdType
 import ParamType.ParamType
 
@@ -47,14 +48,14 @@ object Parser {
                                    (space ~ comment.?) ).map{ case (l, (c, i), ps, cmt) => Command(c, i, ps, l, cmt) }
   val cmdEmpty: P[Command] = P( space ~ comment ).map( c => Command(CmdType.Empty, Nil, Nil, None, Some(c)) )
   val emptyLine: P[Command] = Pass.map(_ => Command(CmdType.Empty, Nil, Nil, None, None))
+  val cmdNoEOL: P[Command] = P( cmdNonEmpty | cmdEmpty )
   val cmd: P[Command] = P( ((cmdNonEmpty | cmdEmpty) ~/ eol) | (emptyLine ~ eol) )
   val cmds: P[Seq[Command]] = P( cmd.rep ~ End )
 
   def apply(str: String): Seq[Command] = cmds.parse(str) match {
     case Parsed.Success(cs, _) => cs
     case other: Parsed.Failure =>
-      println(other.extra.traced.trace)
-      sys.error(other.toString)
+      sys.error(other.toString + " " + other.extra.traced.trace)
   }
 
   //TODO parse from reader
