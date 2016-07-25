@@ -3,6 +3,7 @@ package libgcode
 import org.scalatest._
 import dzufferey.utils.IO
 import fastparse.all._
+import fastparse.core.Parsed
 
 class ParserTest extends FunSuite {
   
@@ -74,6 +75,10 @@ class ParserTest extends FunSuite {
   
   test("sample 005") {
     expectedNbrLineLoop("sample005.gcode", 3)
+  }
+  
+  test("sample 006") {
+    expectedNbrLineLoop("sample006.gcode", 2)
   }
   
   test("slic3r 01") {

@@ -2,19 +2,19 @@ package libgcode
 
 object CmdType extends Enumeration {
   type CmdType = Value
-  val G, M, O, Empty = Value
+  val G, M, O, T, Empty = Value
 }
 
 object ParamType extends Enumeration {
   type ParamType = Value
-  val A, B, C, D, E, F, H, I, J, K, L, P, Q, R, S, T, X, Y, Z = Value
+  val A, B, C, D, E, F, H, I, J, K, L, P, Q, R, S, X, Y, Z = Value
 }
 
 import CmdType._
 import ParamType._
 
 // each line is a command
-case class Command( ctype: CmdType,             // G/M/O, Empty means it is a comment only
+case class Command( ctype: CmdType,             // Empty means it is a comment only
                     code: Seq[Int],             // code X.Y corresponds to Seq(X, Y)
                     parameters: Seq[Param],     // parameters
                     line: Option[Int],          // line number (optional)
@@ -36,6 +36,6 @@ object RealParam {
 }
 
 object IntParam {
-  val types = Set(L, S, T)
+  val types = Set(L, S)
   def is(t: ParamType) = types(t)
 }

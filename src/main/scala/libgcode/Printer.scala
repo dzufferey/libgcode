@@ -8,7 +8,7 @@ class Printer(writer: BufferedWriter) {
   def apply(cmd: Command) = {
     cmd.line.foreach( l => {
       writer.write('N')
-      writer.write(l)
+      writer.write(l.toString)
       writer.write(' ')
     })
     cmd.ctype match {

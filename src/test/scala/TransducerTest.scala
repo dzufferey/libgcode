@@ -14,6 +14,7 @@ class TransducerTest extends FunSuite {
     ("sample003.gcode", 17),
     ("sample004.gcode", 17),
     ("sample005.gcode", 3),
+    ("sample006.gcode", 2),
     ("slic3r01.gco", 215668),
     ("gcodetools01.ngc", 29)
   )
