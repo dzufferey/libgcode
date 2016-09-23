@@ -36,7 +36,7 @@ object Parser {
 
   val line: P[Int] = P( ("N" | "n") ~ integer )
 
-  val lineComment: P[String] = P( ";" ~/ CharsWhile(c => c != '\n' && c != '\r').! )
+  val lineComment: P[String] = P( ";" ~/ CharsWhile(c => c != '\n' && c != '\r').?.! )
   val blockComment: P[String] = P( "(" ~/ CharsWhile(_ != ')').! ~ ")" )
   val comment: P[String] = P( lineComment | blockComment )
 

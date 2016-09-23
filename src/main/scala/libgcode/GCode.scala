@@ -1,5 +1,8 @@
 package libgcode
 
+import java.text.{DecimalFormat,DecimalFormatSymbols}
+import java.util.Locale
+
 object CmdType extends Enumeration {
   type CmdType = Value
   val G, M, O, T, Empty = Value
@@ -23,7 +26,7 @@ case class Command( ctype: CmdType,             // Empty means it is a comment o
 sealed abstract class Param
 case class RealParam(ptype: ParamType, value: Double) extends Param {
   assert(RealParam.is(ptype), ptype + " is not a real valued parameter")
-  override def toString = ptype.toString + value
+  override def toString = ptype.toString + RealParam.format(value)
 }
 case class IntParam(ptype: ParamType, value: Int) extends Param {
   assert(IntParam.is(ptype), ptype + " is not an integer valued parameter")
@@ -33,6 +36,10 @@ case class IntParam(ptype: ParamType, value: Int) extends Param {
 object RealParam {
   val types = Set(A, B, C, D, E, F, H, I, J, K, P, Q, R, X, Y, Z)
   def is(t: ParamType) = types(t)
+
+  protected val df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH))
+  df.setMaximumFractionDigits(340)
+  def format(d: Double) = df.format(d)
 }
 
 object IntParam {

@@ -47,7 +47,10 @@ class ParserTest extends FunSuite {
     val printed = Printer(commands)
     //IO.writeInFile("temp.txt", printed)
     val reparsed = Parser(printed)
-    assert(commands == reparsed)
+    assert(reparsed.size == n)
+    for (i <- 0 until n) {
+        assert(commands(i) == reparsed(i), "at " + i)
+    }
   }
 
 
@@ -81,6 +84,10 @@ class ParserTest extends FunSuite {
     expectedNbrLineLoop("sample006.gcode", 2)
   }
   
+  test("sample 007") {
+    expectedNbrLineLoop("sample007.gcode", 94)
+  }
+
   test("slic3r 01") {
     // TODO not quite sure why the reparsing fails
     // printing on disk and parsing works fine ...
@@ -97,6 +104,10 @@ class ParserTest extends FunSuite {
 
   test("cura 02") {
     expectedNbrLineLoop("cura02.gco", 2491)
+  }
+
+  test("kisslicer 01") {
+    expectedNbrLineLoop("kisslicer01.gcode", 3228)
   }
 
 }
