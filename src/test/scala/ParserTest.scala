@@ -91,4 +91,12 @@ class ParserTest extends FunSuite {
     expectedNbrLineLoop("gcodetools01.ngc", 29)
   }
 
+  test("cura 01") {
+    expectedNbrLineLoop("cura01.gco", 2488)
+  }
+
+  test("cura 02") {
+    expectedNbrLineLoop("cura02.gco", 2491)
+  }
+
 }

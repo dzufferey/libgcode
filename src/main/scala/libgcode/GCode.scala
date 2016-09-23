@@ -7,11 +7,11 @@ object CmdType extends Enumeration {
 
 object ParamType extends Enumeration {
   type ParamType = Value
-  val A, B, C, D, E, F, H, I, J, K, L, P, Q, R, S, X, Y, Z = Value
+  val A, B, C, D, E, F, H, I, J, K, L, P, Q, R, S, T, X, Y, Z = Value
 }
 
 import CmdType._
-import ParamType._
+import ParamType.{T => PT, _}
 
 // each line is a command
 case class Command( ctype: CmdType,             // Empty means it is a comment only
@@ -36,6 +36,6 @@ object RealParam {
 }
 
 object IntParam {
-  val types = Set(L, S)
+  val types = Set(L, S, PT)
   def is(t: ParamType) = types(t)
 }

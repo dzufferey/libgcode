@@ -21,6 +21,7 @@ For instance:
 
 A few sample classes of g-code transformers:
 * remove comments
+* sanitization / well-formedness check
 * change unit (inch to mm and return)
 * scale, translate, rotate
 * circular motion to segments (given a maximal acceptable error)
