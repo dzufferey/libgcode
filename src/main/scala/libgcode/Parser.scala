@@ -30,7 +30,8 @@ object Parser {
 
   val realParam: P[RealParam] = P( paramType.filter(RealParam.is) ~ real ).map{ case (a, b) => RealParam(a, b) }
   val intParam: P[IntParam] = P( paramType.filter(IntParam.is) ~ integer ).map{ case (a, b) => IntParam(a, b) }
-  val param: P[Param] = P( realParam | intParam )
+  val paramT: P[ParamT] = P( paramType ).map( a => ParamT(a) )
+  val param: P[Param] = P( realParam | intParam | paramT )
 
   val cmdType: P[CmdType] = P( CharPred( isCommand ).!.map(c => CmdType.withName(c.toUpperCase)) )
 

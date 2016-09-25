@@ -88,6 +88,10 @@ class ParserTest extends FunSuite {
     expectedNbrLineLoop("sample007.gcode", 94)
   }
 
+  test("sample 008") {
+    expectedNbrLineLoop("sample008.gcode", 1)
+  }
+
   test("slic3r 01") {
     // TODO not quite sure why the reparsing fails
     // printing on disk and parsing works fine ...
