@@ -26,8 +26,8 @@ abstract class Transducer {
         Parser.cmdNoEOL.parse(line) match {
           case Parsed.Success(c, _) =>
             cmd = c
-          case other: Parsed.Failure =>
-            sys.error(other.toString + " " + other.extra.traced.trace)
+          case Parsed.Failure(parser, _, extra) =>
+            sys.error("parsing failure: " + parser.toString + " with " + extra.traced.trace)
         }
       }
       val cs = transform(cmd)

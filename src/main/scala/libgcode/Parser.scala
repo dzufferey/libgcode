@@ -55,8 +55,8 @@ object Parser {
 
   def apply(str: String): Seq[Command] = cmds.parse(str) match {
     case Parsed.Success(cs, _) => cs
-    case other: Parsed.Failure =>
-      sys.error(other.toString + " " + other.extra.traced.trace)
+    case Parsed.Failure(parser, _, extra) =>
+      sys.error("parsing failure: " + parser.toString + " with " + extra.traced.trace)
   }
 
   //TODO parse from reader

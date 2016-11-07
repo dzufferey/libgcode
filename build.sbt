@@ -15,12 +15,12 @@ scalacOptions in Compile ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.lihaoyi" %% "fastparse" % "0.3.7",
-  "org.scalatest" %% "scalatest" % "2.2.6" % "test",
+  "com.lihaoyi" %% "fastparse" % "0.4.1",
+  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
   "io.github.dzufferey" %% "misc-scala-utils" % "0.1-SNAPSHOT"
 )
 
-addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.13")
+addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.16")
 
 fork := true
 
