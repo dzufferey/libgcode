@@ -3,19 +3,28 @@ package libgcode
 import java.io._
 import fastparse.core.Parsed
 
-abstract class Transducer {
+trait Transducer {
 
-  /** reinitialize the transducer internal state */
-  protected def reset { }
+  /** (re)initialize the transducer internal state */
+  protected def init: Seq[Command] = Seq()
+
+  /** clean-up */
+  protected def finish: Seq[Command] = Seq()
 
   /** read a command and produce a (possibly empty) sequence of commands */
   protected def transform(cmd: Command): Seq[Command]
+  
+  def transduce(cmds: Seq[Command]): Seq[Command] = {
+    init ++ cmds.flatMap(transform) ++ finish
+  }
 
-  def apply(input: BufferedReader, output: BufferedWriter) = {
+  def transduce(input: BufferedReader, output: BufferedWriter) = {
     var read = 0
     var written = 0
-    reset
     val printer = new Printer(output)
+    val header = init
+    written += header.length
+    printer(header)
     while(input.ready()) {
       val line = input.readLine.trim
       read += 1
@@ -32,8 +41,11 @@ abstract class Transducer {
       }
       val cs = transform(cmd)
       written += cs.length
-      Printer(cs)
+      printer(cs)
     }
+    val footer = finish
+    written += footer.length
+    printer(footer)
     output.flush
     (read, written)
   }

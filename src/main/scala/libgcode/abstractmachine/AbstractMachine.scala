@@ -4,12 +4,6 @@ import libgcode.{Command, Param, ParamT, CmdType, ParamType}
 import libgcode.extractor._
 import scala.collection.mutable.Map
 import scala.math._
-
-object Plane extends Enumeration {
-  type Plane = Value
-  val XY, ZX, YZ = Value
-}
-
 import Plane._
 
 abstract class AbstractMachine {
@@ -26,8 +20,6 @@ abstract class AbstractMachine {
 
   var time = 0.0
   
-  var lineNumber = 0
-
   var absoluteCoordinates = true
 
   var useMillimeters = true
@@ -46,6 +38,8 @@ abstract class AbstractMachine {
   // cooling 
   // cutter radius compensation
   // other axes position (e.g. Extruder)
+        
+  protected def isEq(a: Double, b: Double) = (a-b).abs < 1e-10
 
   protected def linearMotion(x: Double, y: Double, z: Double,
                              a: Double, b: Double, c: Double,
@@ -106,7 +100,7 @@ abstract class AbstractMachine {
       case ZX => hypot( z - k, x - i)
       case YZ => hypot( y - j, y - k)
     } 
-    assert((radius - radiusCheck).abs < 1e-10, "start and end radius of the circle do not agree: " + radius + " and " + radiusCheck)
+    assert(isEq(radius, radiusCheck), "start and end radius of the circle do not agree: " + radius + " and " + radiusCheck)
     def computeArc( i: Double, j: Double, //center of rotation
                     x1: Double, y1: Double, //first point
                     x2: Double, y2: Double //second point
@@ -158,16 +152,24 @@ abstract class AbstractMachine {
     time += feedrate * distance * 60000 // from mm/minutes to ms
   }
 
+  // helper to compute the end position of a motion: default value of the arguments
+  protected def getX = if (absoluteCoordinates) { if (useMillimeters) this.x else this.x / 25.4 } else 0.0
+  protected def getY = if (absoluteCoordinates) { if (useMillimeters) this.y else this.y / 25.4 } else 0.0
+  protected def getZ = if (absoluteCoordinates) { if (useMillimeters) this.z else this.z / 25.4 } else 0.0
+  protected def getA = if (absoluteCoordinates) this.a else 0.0
+  protected def getB = if (absoluteCoordinates) this.b else 0.0
+  protected def getC = if (absoluteCoordinates) this.c else 0.0
+
   def run(cmd: Command): String = {
     cmd match {
       case G(0|1, 0, params) =>
         assert(params.nonEmpty)
-        var x = if (absoluteCoordinates) { if (useMillimeters) this.x else this.x / 25.4 } else 0.0
-        var y = if (absoluteCoordinates) { if (useMillimeters) this.y else this.y / 25.4 } else 0.0
-        var z = if (absoluteCoordinates) { if (useMillimeters) this.z else this.y / 25.4 } else 0.0
-        var a = if (absoluteCoordinates) this.a else 0.0
-        var b = if (absoluteCoordinates) this.b else 0.0
-        var c = if (absoluteCoordinates) this.c else 0.0
+        var x = getX
+        var y = getY
+        var z = getZ
+        var a = getA
+        var b = getB
+        var c = getC
         var f = feedrate
         params.foreach{
           case X(v) => x = v
@@ -183,12 +185,12 @@ abstract class AbstractMachine {
       case G(dir @ (2|3), 0, params) =>
         val clockwise = dir == 2
         // end position
-        var x = if (absoluteCoordinates) { if (useMillimeters) this.x else this.x / 25.4 } else 0.0
-        var y = if (absoluteCoordinates) { if (useMillimeters) this.y else this.y / 25.4 } else 0.0
-        var z = if (absoluteCoordinates) { if (useMillimeters) this.z else this.y / 25.4 } else 0.0
-        var a = if (absoluteCoordinates) this.a else 0.0
-        var b = if (absoluteCoordinates) this.b else 0.0
-        var c = if (absoluteCoordinates) this.c else 0.0
+        var x = getX
+        var y = getY
+        var z = getZ
+        var a = getA
+        var b = getB
+        var c = getC
         //circle given either by R (radius), or IJK (center relative to the start)
         var i = x
         var j = y
@@ -219,7 +221,7 @@ abstract class AbstractMachine {
                          _x2: Double,_y2: Double): (Double, Double) = {
             val x2 = if (useMillimeters) _x2 else 25.4 * _x2
             val y2 = if (useMillimeters) _y2 else 25.4 * _y2
-            assert(x1 != x2 && y1 != y2, "ill-formed command: " + cmd) //TODO rounding
+            assert(!isEq(x1, x2) || !isEq(y1, y2), "ill-formed command: " + cmd)
             // middle point
             val mx = (x1 + x2) / 2
             val my = (y1 + y2) / 2
@@ -251,7 +253,7 @@ abstract class AbstractMachine {
               k = c2
           }
         } else {
-          assert(i != x || j != y || k != z, "ill-formed command: " + cmd)
+          assert(!isEq(i, x) || !isEq(j, y) || !isEq(k, z), "ill-formed command: " + cmd)
         }
         circularMotion(x, y, z, a, b, c, i, j, k, clockwise, p, f)
       case G(4, 0, Seq(P(ms))) => time += ms
@@ -285,10 +287,11 @@ abstract class AbstractMachine {
       case G(91, 0, Seq()) =>   absoluteCoordinates = false
       case G(92, 0, params) =>
         assert(params.nonEmpty)
+        val coeff = if (useMillimeters) 1 else 25.4
         params.foreach{
-          case X(v) => x = v
-          case Y(v) => y = v
-          case Z(v) => z = v
+          case X(v) => x = coeff * v
+          case Y(v) => y = coeff * v
+          case Z(v) => z = coeff * v
           case A(v) => a = v
           case B(v) => b = v
           case C(v) => c = v

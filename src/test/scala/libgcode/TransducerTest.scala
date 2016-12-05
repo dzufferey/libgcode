@@ -31,7 +31,7 @@ class TransducerTest extends FunSuite {
       val file = Paths.get(path, fName)
       val reader = Files.newBufferedReader(file)
       val writer = new BufferedWriter(new StringWriter)
-      val (read, written) = id(reader, writer)
+      val (read, written) = id.transduce(reader, writer)
       assert(nbrLines == read)
       assert(nbrLines == written)
     }

@@ -21,7 +21,14 @@ case class Command( ctype: CmdType,             // Empty means it is a comment o
                     code: Seq[Int],             // code X.Y corresponds to Seq(X, Y)
                     parameters: Seq[Param],     // parameters
                     line: Option[Int],          // line number (optional)
-                    comment: Option[String])    // trailing comment
+                    comment: Option[String])  { // trailing comment
+
+  def replaceComment(c: Option[String]) = {
+    if (c == comment) this
+    else Command(ctype, code, parameters, line, comment)
+  }
+
+}
 
 sealed abstract class Param
 case class ParamT(ptype: ParamType) extends Param {

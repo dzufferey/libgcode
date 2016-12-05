@@ -9,6 +9,8 @@ class IntParamExtractor(paramType: ParamType.Value) {
     case _ => None
   }
 
+  def apply(i: Int) = IntParam(paramType, i)
+
 }
 
 class RealParamExtractor(paramType: ParamType.Value) {
@@ -18,6 +20,7 @@ class RealParamExtractor(paramType: ParamType.Value) {
     case _ => None
   }
 
+  def apply(d: Double) = RealParam(paramType, d)
 }
 
 
