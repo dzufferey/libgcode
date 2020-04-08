@@ -4,23 +4,21 @@ organization := "io.github.dzufferey"
 
 version := "0.1-SNAPSHOT"
 
-scalaVersion := "2.12.2"
+scalaVersion := "2.13.1"
 
 scalacOptions in Compile ++= Seq(
-    //"-Xlog-implicits",
     "-unchecked",
     "-deprecation",
-    "-feature",
-    "-Xmax-classfile-name", "110"
+    "-feature"
 )
 
 libraryDependencies ++= Seq(
-  "com.lihaoyi" %% "fastparse" % "0.4.2",
-  "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+  "com.lihaoyi" %% "fastparse" % "2.2.2",
+  "org.scalatest" %% "scalatest" % "3.1.1" % "test",
   "io.github.dzufferey" %% "misc-scala-utils" % "0.1-SNAPSHOT"
 )
 
-addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
+//addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
 fork := true
 

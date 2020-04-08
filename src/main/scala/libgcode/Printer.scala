@@ -5,7 +5,7 @@ import dzufferey.utils.IO
 
 class Printer(writer: BufferedWriter) {
 
-  def apply(cmd: Command) = {
+  def apply(cmd: Command): Unit = {
     cmd.line.foreach( l => {
       writer.write('N')
       writer.write(l.toString)
@@ -34,7 +34,7 @@ class Printer(writer: BufferedWriter) {
     writer.newLine
   }
 
-  def apply(cmds: Seq[Command]) {
+  def apply(cmds: Seq[Command]): Unit = {
     cmds.foreach(apply)
   }
 
@@ -50,11 +50,11 @@ object Printer {
     s.toString
   }
 
-  def apply(cmds: Seq[Command], fileName: String) {
+  def apply(cmds: Seq[Command], fileName: String): Unit = {
     IO.writeInFile(fileName, (b: BufferedWriter) => apply(cmds, b))
   }
 
-  def apply(cmds: Seq[Command], out: BufferedWriter) {
+  def apply(cmds: Seq[Command], out: BufferedWriter): Unit = {
     val p = new Printer(out)
     p(cmds)
   }

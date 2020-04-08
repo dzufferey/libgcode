@@ -1,46 +1,45 @@
 package libgcode
 
-import org.scalatest._
+import org.scalatest.funsuite.AnyFunSuite
 import dzufferey.utils.IO
-import fastparse.all._
-import fastparse.core.Parsed
+import fastparse._
 
-class ParserTest extends FunSuite {
+class ParserTest extends AnyFunSuite {
   
   val path = "src/test/resources/"
   
-  def parse[A](p: P[A], str: String) {
-    p.parse(str) match {
+  def ok(p: P[_] => P[Any], str: String) = {
+    parse(str, p) match {
       case Parsed.Success(v, _) => ()
       case other => sys.error(other.toString)
     }
   }
 
-  def check[A](p: P[A], str: String, a: A) {
-    p.parse(str) match {
+  def check[A](p: P[_] => P[A], str: String, a: A) = {
+    parse(str, p) match {
       case Parsed.Success(v, _) => assert(v == a)
       case other => sys.error(other.toString)
     }
   }
   
   test("chunks") {
-    check(Parser.cmdType, "G", CmdType.G)
-    check(Parser.cmdType, "g", CmdType.G)
-    check(Parser.cmdType, "M", CmdType.M)
-    check(Parser.cmdType, "m", CmdType.M)
-    check(Parser.cmdType, "O", CmdType.O)
-    check(Parser.cmdType, "o", CmdType.O)
-    check(Parser.code, "G28", (CmdType.G, scala.collection.mutable.ArrayBuffer(28)))
-    check(Parser.code, "M104", (CmdType.M, scala.collection.mutable.ArrayBuffer(104)))
-    check(Parser.line, "n04", 4)
-    check(Parser.lineComment, "; home all axes", " home all axes")
-    check(Parser.comment, "; home all axes", " home all axes")
-    parse(Parser.cmdEmpty, "; home all axes")
-    parse(Parser.cmdEmpty, "   ; home all axes")
-    parse(Parser.emptyLine, "")
+    check(Parser.cmdType(_), "G", CmdType.G)
+    check(Parser.cmdType(_), "g", CmdType.G)
+    check(Parser.cmdType(_), "M", CmdType.M)
+    check(Parser.cmdType(_), "m", CmdType.M)
+    check(Parser.cmdType(_), "O", CmdType.O)
+    check(Parser.cmdType(_), "o", CmdType.O)
+    check(Parser.code(_), "G28", (CmdType.G, scala.collection.mutable.ArrayBuffer(28)))
+    check(Parser.code(_), "M104", (CmdType.M, scala.collection.mutable.ArrayBuffer(104)))
+    check(Parser.line(_), "n04", 4)
+    check(Parser.lineComment(_), "; home all axes", "home all axes")
+    check(Parser.comment(_), "; home all axes", "home all axes")
+    ok(Parser.cmdEmpty(_), "; home all axes")
+    ok(Parser.cmdEmpty(_), "   ; home all axes")
+    ok(Parser.emptyLine(_), "")
   }
   
-  def expectedNbrLineLoop(fName: String, n: Int) {
+  def expectedNbrLineLoop(fName: String, n: Int) = {
     val raw = IO.readTextFile(path + fName)
     val commands = Parser(raw)
     assert(commands.size == n)
@@ -54,7 +53,7 @@ class ParserTest extends FunSuite {
   }
 
 
-  def expectedNbrLine(fName: String, n: Int) {
+  def expectedNbrLine(fName: String, n: Int) = {
     val raw = IO.readTextFile(path + fName)
     val commands = Parser(raw)
     assert(commands.size == n)

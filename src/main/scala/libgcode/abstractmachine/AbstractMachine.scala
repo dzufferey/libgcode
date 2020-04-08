@@ -43,7 +43,7 @@ abstract class AbstractMachine {
 
   protected def linearMotion(x: Double, y: Double, z: Double,
                              a: Double, b: Double, c: Double,
-                             f: Double) {
+                             f: Double) = {
     val coeff = if (useMillimeters) 1 else 25.4
     val x2 = coeff * x
     val y2 = coeff * y
@@ -72,7 +72,7 @@ abstract class AbstractMachine {
   protected def circularMotion(_x: Double,_y: Double,_z: Double, // end position
                                 a: Double, b: Double, c: Double, // end orientation
                                _i: Double,_j: Double,_k: Double, // center of rotation
-                               clockwise: Boolean, p: Int, f: Double) { // number of turns and feedrate
+                               clockwise: Boolean, p: Int, f: Double) = { // number of turns and feedrate
     // equation of an helix:
     // x(t) = a * cos(t)
     // y(t) = a * sin(t)

@@ -1,7 +1,8 @@
 package libgcode
 
 import java.io._
-import fastparse.core.Parsed
+import fastparse._
+import SingleLineWhitespace._
 
 trait Transducer {
 
@@ -32,11 +33,11 @@ trait Transducer {
       if (line == "") {
         cmd = Command(CmdType.Empty, Nil, Nil, None, None)
       } else {
-        Parser.cmdNoEOL.parse(line) match {
+        parse(line, Parser.cmdNoEOL(_)) match {
           case Parsed.Success(c, _) =>
             cmd = c
-          case Parsed.Failure(parser, _, extra) =>
-            sys.error("parsing failure: " + parser.toString + " with " + extra.traced.trace)
+          case f @ Parsed.Failure(parser, _, _) =>
+            sys.error("parsing failure: " + parser.toString + " with " + f.trace().longMsg)
         }
       }
       val cs = transform(cmd)
