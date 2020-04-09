@@ -9,6 +9,10 @@ For the moment, it just parses and prints basic g-code files.
 
 ## ToDo
 
+#### Parser
+
+* better support of modal commands
+
 #### Extractors
 
 Some more extractors for commands.
@@ -43,3 +47,10 @@ The state of the machine is:
 * ? tool lenght offset
 * ? extruder(s) feedrate/position
 * ? value of other parameters
+
+#### Using this withing a Jupyter
+
+1. [install Jupyter](https://jupyter.org/install)
+2. [install Almond](https://almond.sh/docs/quick-start-install)
+3. run `sbt publishLocal` in this folder
+4. the file `samples.ipynb` contains some examples

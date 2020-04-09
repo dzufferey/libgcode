@@ -7,3 +7,10 @@ target/
 lib_managed/
 src_managed/
 project/
+
+# jupyter stuff
+.ipynb_checkpoints
+
+# g-code files
+*.nc
+*.gcode
