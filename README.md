@@ -6,12 +6,29 @@ A scala library to parse, transform, and print g-code files
 
 I just started on that.
 For the moment, it just parses and prints basic g-code files.
+There are limitations to the kind of gcode can be parsed/represented.
+Currently, modal commands not supported.
+See "ToDo" below for more details.
+
+## Using libgcode with Jupyter
+
+This is the way I'm currently using it.
+
+1. [install Jupyter](https://jupyter.org/install)
+2. [install Almond](https://almond.sh/docs/quick-start-install)
+3. run `sbt publishLocal` in this folder
+4. open the file `samples.ipynb` in Jupyter to see examples
 
 ## ToDo
 
-#### Parser
+#### Better support of modal commands
 
-* better support of modal commands
+TL;DR it works better if the commands start with `G`, `M`, or `O`.
+Use `Empty` when the command is not specified.
+
+When I started this, I was only looking at g-code from 3D printer slicer.
+They all followed the restriction above so I incorrectly assumed it was like that.
+Later, when I started to play with CNC routers I learned about modal commands (e.g. a line to set the feed without any motion command, not repeating G1).
 
 #### Extractors
 
@@ -48,9 +65,3 @@ The state of the machine is:
 * ? extruder(s) feedrate/position
 * ? value of other parameters
 
-#### Using this withing a Jupyter
-
-1. [install Jupyter](https://jupyter.org/install)
-2. [install Almond](https://almond.sh/docs/quick-start-install)
-3. run `sbt publishLocal` in this folder
-4. the file `samples.ipynb` contains some examples

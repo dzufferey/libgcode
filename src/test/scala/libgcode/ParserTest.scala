@@ -34,9 +34,9 @@ class ParserTest extends AnyFunSuite {
     check(Parser.line(_), "n04", 4)
     check(Parser.lineComment(_), "; home all axes", "home all axes")
     check(Parser.comment(_), "; home all axes", "home all axes")
-    ok(Parser.cmdEmpty(_), "; home all axes")
-    ok(Parser.cmdEmpty(_), "   ; home all axes")
-    ok(Parser.emptyLine(_), "")
+    ok(Parser.comment(_), "; home all axes")
+    ok(Parser.comment(_), "   ; home all axes")
+    ok(Parser.cmd(_), "")
   }
   
   def expectedNbrLineLoop(fName: String, n: Int) = {

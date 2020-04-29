@@ -18,10 +18,10 @@ class Printer(writer: BufferedWriter) {
         writer.write(other.toString)
         writer.write(cmd.code.mkString("."))
         if (cmd.parameters.nonEmpty) writer.write(' ')
-        writer.write(cmd.parameters.mkString(" "))
     }
+    writer.write(cmd.parameters.mkString(" "))
+    if (cmd.comment.nonEmpty) writer.write(' ')
     cmd.comment.foreach( c => {
-      if (cmd.ctype != CmdType.Empty) writer.write(' ')
       if (c contains '\n') {
         writer.write("( ")
         writer.write(c)

@@ -42,15 +42,14 @@ object Parser {
 
   def code[_: P]: P[(CmdType,Seq[Int])] = P( cmdType ~ integer.rep(min=1,sep=".") ) 
 
-  def cmdNonEmpty[_: P]: P[Command] = P( (line ).? ~
-                                   code ~/
-                                   (param.rep()) ~/
-                                   (comment.?) ).map{ case (l, (c, i), ps, cmt) => Command(c, i, ps, l, cmt) }
-  def cmdEmpty[_: P]: P[Command] = P( comment ).map( c => Command(CmdType.Empty, Nil, Nil, None, Some(c)) )
-  def emptyLine[_: P]: P[Command] = Pass.map(_ => Command(CmdType.Empty, Nil, Nil, None, None))
-  def cmdNoEOL[_: P]: P[Command] = P( cmdNonEmpty | cmdEmpty )
-  def cmd[_: P]: P[Command] = P( ((cmdNonEmpty | cmdEmpty) ~/ eol) | (emptyLine ~ eol) )
-  def cmds[_: P]: P[Seq[Command]] = P( cmd.rep ~ End )
+  def cmd[_: P]: P[Command] = P( line.? ~
+                                 code.? ~/
+                                 (param.rep()) ~/
+                                 (comment.?)).map{
+                                   case (l, Some((c, i)), ps, cmt) => Command(c, i, ps, l, cmt)
+                                   case (l, None, ps, cmt) => Command(CmdType.Empty, Nil, ps, l, cmt)
+                                 }
+  def cmds[_: P]: P[Seq[Command]] = P( cmd.rep(sep=eol).map(_.dropRight(1)) ~ End )
 
   def apply(str: String): Seq[Command] = parse(str, cmds(_)) match {
     case Parsed.Success(cs, _) => cs

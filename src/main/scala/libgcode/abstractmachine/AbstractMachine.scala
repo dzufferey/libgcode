@@ -306,7 +306,7 @@ abstract class AbstractMachine {
         } else {
           return "X:" + x/25.4 + " Y:" + y/25.4 + " Z:" + z/25.4 + " A:" + a + " B:" + b + " C:" + c
         }
-      case T(i, 0, Seq()) =>
+      case Empty( Seq(T(i))) =>
         selectedTool = i
       // XXX more commands
       case _ =>

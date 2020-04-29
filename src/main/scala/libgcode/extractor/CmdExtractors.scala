@@ -22,4 +22,13 @@ object M extends CmdExtractor(CmdType.M) { }
 
 object O extends CmdExtractor(CmdType.O) { }
 
-object T extends CmdExtractor(CmdType.T) { }
+object Empty {
+  
+  def unapply(c: Command): Option[Seq[Param]] = c match {
+    case Command(CmdType.Empty, Nil, parameters, _, _) => Some(parameters)
+    case _ => None
+  }
+
+  def apply(args: Param*) = Command(CmdType.Empty, Nil, args, None, None)
+
+}

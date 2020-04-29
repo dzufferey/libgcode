@@ -47,4 +47,4 @@ object R extends RealParamExtractor(ParamType.R) { }
 object L extends IntParamExtractor(ParamType.L) { }
 object P extends IntParamExtractor(ParamType.P) { }
 object S extends IntParamExtractor(ParamType.S) { }
-object Pt extends IntParamExtractor(ParamType.T) { }
+object T extends IntParamExtractor(ParamType.T) { }

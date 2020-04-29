@@ -33,7 +33,7 @@ trait Transducer {
       if (line == "") {
         cmd = Command(CmdType.Empty, Nil, Nil, None, None)
       } else {
-        parse(line, Parser.cmdNoEOL(_)) match {
+        parse(line, Parser.cmd(_)) match {
           case Parsed.Success(c, _) =>
             cmd = c
           case f @ Parsed.Failure(parser, _, _) =>
