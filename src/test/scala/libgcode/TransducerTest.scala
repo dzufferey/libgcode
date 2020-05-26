@@ -1,10 +1,10 @@
 package libgcode
 
-import org.scalatest._
+import org.scalatest.funsuite.AnyFunSuite
 import java.io._
 import java.nio.file._
 
-class TransducerTest extends FunSuite {
+class TransducerTest extends AnyFunSuite {
   
   val path = "src/test/resources/"
 

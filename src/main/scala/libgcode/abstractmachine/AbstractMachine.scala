@@ -2,12 +2,13 @@ package libgcode.abstractmachine
 
 import libgcode.{Command, Param, ParamT, CmdType, ParamType}
 import libgcode.extractor._
-import scala.collection.mutable.Map
 import scala.math._
 import Plane._
 
-abstract class AbstractMachine {
+class AbstractMachine {
 
+  val maxFeed = 2500.0 // for G0
+    
   // position
   var x = 0.0
   var y = 0.0
@@ -39,7 +40,16 @@ abstract class AbstractMachine {
   // cutter radius compensation
   // other axes position (e.g. Extruder)
         
-  protected def isEq(a: Double, b: Double) = (a-b).abs < 1e-10
+  protected def isEq(a: Double, b: Double) = (a-b).abs < 1e-5
+
+  protected def setFeed(f: Double) = {
+      if (useMillimeters) {
+          feedrate = f
+      } else {
+          feedrate = f * 25.4
+      }
+  }
+
 
   protected def linearMotion(x: Double, y: Double, z: Double,
                              a: Double, b: Double, c: Double,
@@ -63,11 +73,30 @@ abstract class AbstractMachine {
       this.b += b
       this.c += c
     }
-    feedrate = f
     //TODO account for the rotation (a/b/c) ? (the position is given at tool tip so rotation should not matter)
     val distance = math.sqrt(x2*x2 + y2*y2 + z2*z2)
-    time += feedrate * distance * 60000 // from mm/minutes to ms
+    time += f * distance * 60000 // from mm/minutes to ms
   }
+  
+    
+  protected def getRotationAngle( cx: Double, cy: Double, //center of rotation
+                                  x1: Double, y1: Double, //first point
+                                  x2: Double, y2: Double, //second point
+                                  clockwise: Boolean, turns: Int): Double = {
+      val dx1 = x1 - cx
+      val dy1 = y1 - cy
+      val n1 = hypot(dx1, dy1)
+      val dx2 = x2 - cx
+      val dy2 = y2 - cy
+      val n2 = hypot(dx2, dy2)
+      val a0 = acos( (dx1 * dx2 + dy1 * dy2) / n1 / n2 )
+      val a = if (clockwise && a0 >= 0) a0
+              else if (clockwise && a0 < 0) a0 + 2*Pi
+              else if (!clockwise && a0 <= 0) -a0
+              else -a0 + 2*Pi // !clockwise && a > 0
+      val turnAngle = if (clockwise) -2*turns*math.Pi else 2*turns*math.Pi
+      a + turnAngle
+    }
   
   protected def circularMotion(_x: Double,_y: Double,_z: Double, // end position
                                 a: Double, b: Double, c: Double, // end orientation
@@ -88,42 +117,31 @@ abstract class AbstractMachine {
     val i = coeff * _i
     val j = coeff * _j
     val k = coeff * _k
+    
+    // get the center
+    val cx = this.x + i
+    val cy = this.y + j
+    val cz = this.z + k
 
     // compute the radius, the angle, and pitch of the helix
     val radius: Double = plane match {
-      case XY => hypot( this.x - i, this.y - j)
-      case ZX => hypot( this.z - k, this.x - i)
-      case YZ => hypot( this.y - j, this.y - k)
+      case XY => hypot( i, j)
+      case ZX => hypot( k, i)
+      case YZ => hypot( j, k)
     } 
     val radiusCheck = plane match {
-      case XY => hypot( x - i, y - j)
-      case ZX => hypot( z - k, x - i)
-      case YZ => hypot( y - j, y - k)
+      case XY => hypot( x - cx, y - cy)
+      case ZX => hypot( z - cz, x - cx)
+      case YZ => hypot( y - cy, z - cz)
     } 
     assert(isEq(radius, radiusCheck), "start and end radius of the circle do not agree: " + radius + " and " + radiusCheck)
-    def computeArc( i: Double, j: Double, //center of rotation
-                    x1: Double, y1: Double, //first point
-                    x2: Double, y2: Double //second point
-                  ): Double = {
-      val dx1 = x1 - i
-      val dy1 = y1 - j
-      val n1 = hypot(dx1, dy1)
-      val dx2 = x2 - i
-      val dy2 = y2 - j
-      val n2 = hypot(dx2, dy2)
-      val a = acos( (dx1 * dx2 + dy1 * dy2) / n1 / n2 )
-      if (clockwise && a >= 0) a
-      else if (clockwise && a < 0) a + 2*Pi
-      else if (!clockwise && a <= 0) -a
-      else -a + 2*Pi // !clockwise && a > 0
-    }
+
     val arc = plane match {
-      case XY => computeArc(i, j, this.x, this.y, x, y)
-      case ZX => computeArc(k, i, this.z, this.x, z, x) 
-      case YZ => computeArc(j, k, this.y, this.z, y, z) 
+      case XY => getRotationAngle(cx, cy, this.x, this.y, x, y, clockwise, p)
+      case ZX => getRotationAngle(cz, cx, this.z, this.x, z, x, clockwise, p) 
+      case YZ => getRotationAngle(cy, cz, this.y, this.z, y, z, clockwise, p) 
     }
-    val turns = 2*p*Pi
-    val angle = turns + arc.abs // undirected angle
+    val angle = arc.abs
     val pitchOver2Pi: Double = plane match {
       case XY => (z - this.z) / angle
       case ZX => (y - this.y) / angle
@@ -146,11 +164,33 @@ abstract class AbstractMachine {
       this.b += b
       this.c += c
     }
-    feedrate = f
     //TODO account for the rotation (a/b/c) ? (the position is given at tool tip so rotation should not matter)
     val distance = angle * hypot(radius, pitchOver2Pi)
-    time += feedrate * distance * 60000 // from mm/minutes to ms
+    time += f * distance * 60000 // from mm/minutes to ms
   }
+
+  protected def findCenter( x1: Double, y1: Double,_x2: Double,_y2: Double,
+                            r: Double, clockwise: Boolean): (Double, Double) = {
+    val x2 = if (useMillimeters) _x2 else 25.4 * _x2
+    val y2 = if (useMillimeters) _y2 else 25.4 * _y2
+    assert(!isEq(x1, x2) || !isEq(y1, y2), "ill-formed command " + (if (clockwise) "G2" else "G3"))
+    // middle point
+    val mx = (x1 + x2) / 2
+    val my = (y1 + y2) / 2
+    // vector from p₁ to p₂
+    val dx = x2 - x1
+    val dy = y2 - y1
+    // normal to d (take the direction into account)
+    val nx = (if (clockwise)  dy else -dy) / hypot(dx, dy)
+    val ny = (if (clockwise) -dx else  dx) / hypot(dx, dy)
+    // how far from m should we go ???
+    val toM2 = (mx - x1) * (mx - x1) + (my - y1) * (my - y1)
+    val k = sqrt(r*r - toM2)
+    val px = mx + nx * k
+    val py = my + ny * k
+    (px, py)
+  }
+
 
   // helper to compute the end position of a motion: default value of the arguments
   protected def getX = if (absoluteCoordinates) { if (useMillimeters) this.x else this.x / 25.4 } else 0.0
@@ -162,7 +202,7 @@ abstract class AbstractMachine {
 
   def run(cmd: Command): String = {
     cmd match {
-      case G(0|1, 0, params) =>
+      case G(mode @ (0|1), 0, params) =>
         assert(params.nonEmpty)
         var x = getX
         var y = getY
@@ -170,7 +210,6 @@ abstract class AbstractMachine {
         var a = getA
         var b = getB
         var c = getC
-        var f = feedrate
         params.foreach{
           case X(v) => x = v
           case Y(v) => y = v
@@ -178,9 +217,10 @@ abstract class AbstractMachine {
           case A(v) => a = v
           case B(v) => b = v
           case C(v) => c = v
-          case F(v) => f = v
+          case F(v) => setFeed(v)
           case other => sys.error("in G0 or G1, unexpected axis: " + other)
         }
+        var f = if (mode == 1) feedrate else maxFeed
         linearMotion(x, y, z, a, b, c, f)
       case G(dir @ (2|3), 0, params) =>
         val clockwise = dir == 2
@@ -198,7 +238,6 @@ abstract class AbstractMachine {
         var r = 0.0
         // P is the number of turn
         var p = 0
-        var f = feedrate
         // parse parameters
         params.foreach{
           case X(v) => x = v
@@ -211,51 +250,30 @@ abstract class AbstractMachine {
           case J(v) => j = v
           case K(v) => k = v
           case R(v) => r = v
-          case F(v) => f = v
+          case F(v) => setFeed(v)
           case P(v) => p = v
           case other => sys.error("in G92 unexpected axis: " + other)
-        }
+        } 
         assert(r >= 0, "ill-formed command: " + cmd)
         if (r > 0) {
-          def findCenter( x1: Double, y1: Double,
-                         _x2: Double,_y2: Double): (Double, Double) = {
-            val x2 = if (useMillimeters) _x2 else 25.4 * _x2
-            val y2 = if (useMillimeters) _y2 else 25.4 * _y2
-            assert(!isEq(x1, x2) || !isEq(y1, y2), "ill-formed command: " + cmd)
-            // middle point
-            val mx = (x1 + x2) / 2
-            val my = (y1 + y2) / 2
-            // vector from p₁ to p₂
-            val dx = x2 - x1
-            val dy = y2 - y1
-            // normal to d (take the direction into account)
-            val nx = (if (clockwise)  dy else -dy) / hypot(dx, dy)
-            val ny = (if (clockwise) -dx else  dx) / hypot(dx, dy)
-            // how far from m should we go ???
-            val toM2 = (mx - x1) * (mx - x1) + (my - y1) * (my - y1)
-            val k = sqrt(r*r - toM2)
-            val px = mx + nx * k
-            val py = my + ny * k
-            (px, py)
-          }
           plane match {
             case XY =>
-              val (c1, c2) = findCenter(this.x, this.y, x, y)
-              i = c1
-              j = c2
+              val (c1, c2) = findCenter(this.x, this.y, x, y, r, clockwise)
+              i = c1 - getX
+              j = c2 - getY
             case ZX =>
-              val (c1, c2) = findCenter(this.z, this.x, z, x)
-              k = c1
-              i = c2
+              val (c1, c2) = findCenter(this.z, this.x, z, x, r, clockwise)
+              k = c1 - getZ
+              i = c2 - getX
             case YZ =>
-              val (c1, c2) = findCenter(this.y, this.z, y, z)
-              j = c1
-              k = c2
+              val (c1, c2) = findCenter(this.y, this.z, y, z, r, clockwise)
+              j = c1 - getY
+              k = c2 - getZ
           }
         } else {
           assert(!isEq(i, x) || !isEq(j, y) || !isEq(k, z), "ill-formed command: " + cmd)
         }
-        circularMotion(x, y, z, a, b, c, i, j, k, clockwise, p, f)
+        circularMotion(x, y, z, a, b, c, i, j, k, clockwise, p, feedrate)
       case G(4, 0, Seq(P(ms))) => time += ms
       case G(4, 0, Seq(X(s))) =>  time += 1000 * s
       case G(4, 0, Seq(S(s))) =>  time += 1000 * s
@@ -306,6 +324,8 @@ abstract class AbstractMachine {
         } else {
           return "X:" + x/25.4 + " Y:" + y/25.4 + " Z:" + z/25.4 + " A:" + a + " B:" + b + " C:" + c
         }
+      case Empty( Seq(F(f))) =>
+        setFeed(f)
       case Empty( Seq(T(i))) =>
         selectedTool = i
       // XXX more commands
