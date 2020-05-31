@@ -83,20 +83,16 @@ class AbstractMachine {
                                   x1: Double, y1: Double, //first point
                                   x2: Double, y2: Double, //second point
                                   clockwise: Boolean, turns: Int): Double = {
-      val dx1 = x1 - cx
-      val dy1 = y1 - cy
-      val n1 = hypot(dx1, dy1)
-      val dx2 = x2 - cx
-      val dy2 = y2 - cy
-      val n2 = hypot(dx2, dy2)
-      val a0 = acos( (dx1 * dx2 + dy1 * dy2) / n1 / n2 )
-      val a = if (clockwise && a0 >= 0) a0
-              else if (clockwise && a0 < 0) a0 + 2*Pi
-              else if (!clockwise && a0 <= 0) -a0
-              else -a0 + 2*Pi // !clockwise && a > 0
-      val turnAngle = if (clockwise) -2*turns*math.Pi else 2*turns*math.Pi
-      a + turnAngle
-    }
+    val part1 = atan2(y1 - cy, x1 - cx)
+    val part2 = atan2(y2 - cy, x2 - cx)
+    val a0 = part2 - part1
+    val a = if (clockwise && a0 <= 0) a0
+            else if (clockwise && a0 > 0) a0 - 2*Pi
+            else if (!clockwise && a0 >= 0) a0
+            else a0 + 2*Pi
+    val turnAngle = if (clockwise) -2*turns*Pi else 2*turns*Pi
+    a + turnAngle
+  }
   
   protected def circularMotion(_x: Double,_y: Double,_z: Double, // end position
                                 a: Double, b: Double, c: Double, // end orientation
