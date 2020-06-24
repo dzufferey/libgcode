@@ -324,6 +324,8 @@ class AbstractMachine {
         setFeed(f)
       case Empty( Seq(T(i))) =>
         selectedTool = i
+      case M(2, 0, Seq()) =>
+        () //end of program, not much to do
       // XXX more commands
       case _ =>
         sys.error("Command not supported or ill-formed: " + cmd)
