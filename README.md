@@ -17,7 +17,7 @@ This is the way I'm currently using it.
 1. [install Jupyter](https://jupyter.org/install)
 2. [install Almond](https://almond.sh/docs/quick-start-install)
 3. run `sbt publishLocal` in this folder
-4. open the file `samples.ipynb` in Jupyter to see examples
+4. open the file [notebook/samples.ipynb](notebook/samples.ipynb) in Jupyter to see examples
 
 ## ToDo
 
