@@ -266,8 +266,6 @@ class AbstractMachine {
               j = c1 - getY
               k = c2 - getZ
           }
-        } else {
-          assert(!isEq(i, x) || !isEq(j, y) || !isEq(k, z), "ill-formed command: " + cmd)
         }
         circularMotion(x, y, z, a, b, c, i, j, k, clockwise, p, feedrate)
       case G(4, 0, Seq(P(ms))) => time += ms
