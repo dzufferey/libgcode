@@ -8,7 +8,7 @@ import Plane._
 class AbstractMachine {
 
   val maxFeed = 2500.0 // for G0
-    
+
   // position
   var x = 0.0
   var y = 0.0
@@ -20,7 +20,9 @@ class AbstractMachine {
   var c = 0.0
 
   var time = 0.0
-  
+
+  var mode = 0 //valid: 0, 1, 2, 3, 81, 82, 83
+
   var absoluteCoordinates = true
 
   var useMillimeters = true
@@ -28,18 +30,26 @@ class AbstractMachine {
   var feedrate = 1.0
 
   var plane = XY
-  
+
   var selectedTool = 0
 
   var spindleRPM = 0.0
 
   var toolLengthOffset = 0.0 // use that to compute the motion
 
+  //for drilling operation
+  var initialLevelReturn = true // G98
+  var zInitial: Option[Double] = None
+  var zRetract: Option[Double] = None
+  var peckDistance: Option[Double] = None
+  var dwellTime: Option[Int] = None
+  val peckStartOffset = 1.0 // machine specific
+
   // TODO ?
-  // cooling 
+  // cooling
   // cutter radius compensation
   // other axes position (e.g. Extruder)
-        
+
   protected def isEq(a: Double, b: Double) = (a-b).abs < 1e-5
 
   protected def setFeed(f: Double) = {
@@ -77,8 +87,8 @@ class AbstractMachine {
     val distance = math.sqrt(x2*x2 + y2*y2 + z2*z2)
     time += f * distance * 60000 // from mm/minutes to ms
   }
-  
-    
+
+
   protected def getRotationAngle( cx: Double, cy: Double, //center of rotation
                                   x1: Double, y1: Double, //first point
                                   x2: Double, y2: Double, //second point
@@ -93,7 +103,7 @@ class AbstractMachine {
     val turnAngle = if (clockwise) -2*turns*Pi else 2*turns*Pi
     a + turnAngle
   }
-  
+
   protected def circularMotion(_x: Double,_y: Double,_z: Double, // end position
                                 a: Double, b: Double, c: Double, // end orientation
                                _i: Double,_j: Double,_k: Double, // center of rotation
@@ -113,7 +123,7 @@ class AbstractMachine {
     val i = coeff * _i
     val j = coeff * _j
     val k = coeff * _k
-    
+
     // get the center
     val cx = this.x + i
     val cy = this.y + j
@@ -124,18 +134,18 @@ class AbstractMachine {
       case XY => hypot( i, j)
       case ZX => hypot( k, i)
       case YZ => hypot( j, k)
-    } 
+    }
     val radiusCheck = plane match {
       case XY => hypot( x - cx, y - cy)
       case ZX => hypot( z - cz, x - cx)
       case YZ => hypot( y - cy, z - cz)
-    } 
+    }
     assert(isEq(radius, radiusCheck), "start and end radius of the circle do not agree: " + radius + " and " + radiusCheck)
 
     val arc = plane match {
       case XY => getRotationAngle(cx, cy, this.x, this.y, x, y, clockwise, p)
-      case ZX => getRotationAngle(cz, cx, this.z, this.x, z, x, clockwise, p) 
-      case YZ => getRotationAngle(cy, cz, this.y, this.z, y, z, clockwise, p) 
+      case ZX => getRotationAngle(cz, cx, this.z, this.x, z, x, clockwise, p)
+      case YZ => getRotationAngle(cy, cz, this.y, this.z, y, z, clockwise, p)
     }
     val angle = arc.abs
     val pitchOver2Pi: Double = plane match {
@@ -196,78 +206,130 @@ class AbstractMachine {
   protected def getB = if (absoluteCoordinates) this.b else 0.0
   protected def getC = if (absoluteCoordinates) this.c else 0.0
 
+  def handleLinear(params: Seq[Param]) = {
+    var x = getX
+    var y = getY
+    var z = getZ
+    var a = getA
+    var b = getB
+    var c = getC
+    params.foreach{
+      case X(v) => x = v
+      case Y(v) => y = v
+      case Z(v) => z = v
+      case A(v) => a = v
+      case B(v) => b = v
+      case C(v) => c = v
+      case F(v) => setFeed(v)
+      case other => sys.error("in G0 or G1, unexpected param: " + other)
+    }
+    var f = if (mode == 1) feedrate else maxFeed
+    linearMotion(x, y, z, a, b, c, f)
+  }
+
+  def handleRotate(params: Seq[Param]) = {
+    val clockwise = (mode == 2)
+    // end position
+    var x = getX
+    var y = getY
+    var z = getZ
+    var a = getA
+    var b = getB
+    var c = getC
+    //circle given either by R (radius), or IJK (center relative to the start)
+    var i = x
+    var j = y
+    var k = z
+    var r = 0.0
+    // P is the number of turn
+    var p = 0
+    // parse parameters
+    params.foreach{
+      case X(v) => x = v
+      case Y(v) => y = v
+      case Z(v) => z = v
+      case A(v) => a = v
+      case B(v) => b = v
+      case C(v) => c = v
+      case I(v) => i = v
+      case J(v) => j = v
+      case K(v) => k = v
+      case R(v) => r = v
+      case F(v) => setFeed(v)
+      case P(v) => p = v
+      case other => sys.error("in G2 or G3, unexpected param: " + other)
+    }
+    assert(r >= 0, "ill-formed G2/3 command: radius = " + r)
+    if (r > 0) {
+      plane match {
+        case XY =>
+          val (c1, c2) = findCenter(this.x, this.y, x, y, r, clockwise)
+          i = c1 - getX
+          j = c2 - getY
+        case ZX =>
+          val (c1, c2) = findCenter(this.z, this.x, z, x, r, clockwise)
+          k = c1 - getZ
+          i = c2 - getX
+        case YZ =>
+          val (c1, c2) = findCenter(this.y, this.z, y, z, r, clockwise)
+          j = c1 - getY
+          k = c2 - getZ
+      }
+    }
+    circularMotion(x, y, z, a, b, c, i, j, k, clockwise, p, feedrate)
+  }
+
+  def handleDrillingCycle(params: Seq[Param]) = {
+    assert(plane == XY, "only drill along Z for the moment")
+    var x = getX
+    var y = getY
+    var z = getZ
+    if (zInitial.isEmpty) {
+      zInitial = Some(z)
+    }
+    params.foreach{
+      case X(v) => x = v
+      case Y(v) => y = v
+      case Z(v) => z = v
+      case R(v) => zRetract = Some(v)
+      case Q(v) => peckDistance = Some(v)
+      case F(v) => setFeed(v)
+      case P(v) => dwellTime = Some(v)
+      case other => sys.error("in G81-3 unexpected param: " + other)
+    }
+    // expand the drilling int a sequence of linear motions
+    //1. get to initial position: XY rapid, then Z rapid to R
+    linearMotion(x, y, getZ, getA, getB, getC, maxFeed)
+    linearMotion(getX, getY, zRetract.get, getA, getB, getC, maxFeed)
+    //2. drill
+    var lastZ = zRetract.get
+    while (lastZ > z) {
+        //move to start of peck
+        if (getZ > lastZ + peckStartOffset) {
+            linearMotion(getX, getY, lastZ + peckStartOffset, getA, getB, getC, maxFeed)
+        }
+        //peck/drill
+        lastZ = if(mode == 83) max(z, lastZ - peckDistance.get) else z
+        linearMotion(getX, getY, lastZ, getA, getB, getC, feedrate)
+        //dwell at last step
+        if (lastZ == z && mode == 82) {
+            run(G(4, P(dwellTime.get)))
+        }
+        //retract
+        linearMotion(getX, getY, zRetract.get, getA, getB, getC, maxFeed)
+    }
+  }
+
   def run(cmd: Command): String = {
     cmd match {
-      case G(mode @ (0|1), 0, params) =>
-        assert(params.nonEmpty)
-        var x = getX
-        var y = getY
-        var z = getZ
-        var a = getA
-        var b = getB
-        var c = getC
-        params.foreach{
-          case X(v) => x = v
-          case Y(v) => y = v
-          case Z(v) => z = v
-          case A(v) => a = v
-          case B(v) => b = v
-          case C(v) => c = v
-          case F(v) => setFeed(v)
-          case other => sys.error("in G0 or G1, unexpected axis: " + other)
-        }
-        var f = if (mode == 1) feedrate else maxFeed
-        linearMotion(x, y, z, a, b, c, f)
+      case G(m @ (0|1), 0, Seq()) =>    mode = m
+      case G(m @ (0|1), 0, params) =>
+        mode = m
+        handleLinear(params)
+      case G(dir @ (2|3), 0, Seq()) =>  mode = dir
       case G(dir @ (2|3), 0, params) =>
-        val clockwise = dir == 2
-        // end position
-        var x = getX
-        var y = getY
-        var z = getZ
-        var a = getA
-        var b = getB
-        var c = getC
-        //circle given either by R (radius), or IJK (center relative to the start)
-        var i = x
-        var j = y
-        var k = z
-        var r = 0.0
-        // P is the number of turn
-        var p = 0
-        // parse parameters
-        params.foreach{
-          case X(v) => x = v
-          case Y(v) => y = v
-          case Z(v) => z = v
-          case A(v) => a = v
-          case B(v) => b = v
-          case C(v) => c = v
-          case I(v) => i = v
-          case J(v) => j = v
-          case K(v) => k = v
-          case R(v) => r = v
-          case F(v) => setFeed(v)
-          case P(v) => p = v
-          case other => sys.error("in G92 unexpected axis: " + other)
-        } 
-        assert(r >= 0, "ill-formed command: " + cmd)
-        if (r > 0) {
-          plane match {
-            case XY =>
-              val (c1, c2) = findCenter(this.x, this.y, x, y, r, clockwise)
-              i = c1 - getX
-              j = c2 - getY
-            case ZX =>
-              val (c1, c2) = findCenter(this.z, this.x, z, x, r, clockwise)
-              k = c1 - getZ
-              i = c2 - getX
-            case YZ =>
-              val (c1, c2) = findCenter(this.y, this.z, y, z, r, clockwise)
-              j = c1 - getY
-              k = c2 - getZ
-          }
-        }
-        circularMotion(x, y, z, a, b, c, i, j, k, clockwise, p, feedrate)
+        mode = dir
+        handleRotate(params)
       case G(4, 0, Seq(P(ms))) => time += ms
       case G(4, 0, Seq(X(s))) =>  time += 1000 * s
       case G(4, 0, Seq(S(s))) =>  time += 1000 * s
@@ -295,6 +357,16 @@ class AbstractMachine {
             case other => sys.error("in G28, unexpected axis: " + other)
           }
         }
+      case G(80, 0, Seq()) =>
+        val z = if (initialLevelReturn) zInitial.get else zRetract.get
+        zInitial = None
+        zRetract = None
+        peckDistance = None
+        dwellTime = None
+        run(G(0, Z(z)))
+      case G(cycleKind @ (81 | 82 | 83), 0, params) =>
+        mode = cycleKind
+        handleDrillingCycle(params)
       case G(90, 0, Seq()) =>   absoluteCoordinates = true
       case G(91, 0, Seq()) =>   absoluteCoordinates = false
       case G(92, 0, params) =>
@@ -309,6 +381,8 @@ class AbstractMachine {
           case C(v) => c = v
           case other => sys.error("in G92 unexpected axis: " + other)
         }
+      case G(98, 0, Seq()) => initialLevelReturn = true
+      case G(99, 0, Seq()) => initialLevelReturn = false
       case M(3, 0, Seq(S(clockwise))) =>    spindleRPM = clockwise
       case M(4, 0, Seq(S(cclockwise))) =>   spindleRPM = -cclockwise
       case M(5, 0, Seq()) =>                spindleRPM = 0
@@ -322,6 +396,11 @@ class AbstractMachine {
         setFeed(f)
       case Empty( Seq(T(i))) =>
         selectedTool = i
+      case Empty(params) =>
+        if (mode == 0 || mode == 1) handleLinear(params)
+        else if (mode == 2 || mode == 3) handleRotate(params)
+        else if (mode == 81 || mode == 82 || mode == 83) handleDrillingCycle(params)
+        else sys.error("Command not supported or ill-formed: " + cmd)
       case M(2, 0, Seq()) =>
         () //end of program, not much to do
       // XXX more commands

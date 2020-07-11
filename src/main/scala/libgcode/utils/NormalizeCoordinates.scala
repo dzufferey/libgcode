@@ -7,11 +7,12 @@ import scala.collection.mutable.Map
 import scala.math._
 import Plane._
 
+//only works for G0/1/2/3
 class NormalizeCoordinates(initX: Double, initY: Double, initZ: Double,
                            initA: Double, initB: Double, initC: Double,
                            initP: Plane.Plane)
     extends AbstractMachine with Transducer {
-  
+
   override protected def init: Seq[Command] = {
     x = initX
     y = initY
