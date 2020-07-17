@@ -3,7 +3,11 @@ package libgcode
 import java.io._
 import dzufferey.utils.IO
 
-class Printer(writer: BufferedWriter) {
+class Printer(prefix: Option[String],
+              suffix: Option[String],
+              formatCmdType: Int => String,
+              formatFloat: Double => String,
+              writer: BufferedWriter) {
 
   def apply(cmd: Command): Unit = {
     cmd.line.foreach( l => {
@@ -16,10 +20,14 @@ class Printer(writer: BufferedWriter) {
         ()
       case other =>
         writer.write(other.toString)
-        writer.write(cmd.code.mkString("."))
+        writer.write(cmd.code.map(formatCmdType).mkString("."))
         if (cmd.parameters.nonEmpty) writer.write(' ')
     }
-    writer.write(cmd.parameters.mkString(" "))
+    val formatedParams = cmd.parameters.map( p => p match {
+        case p @ RealParam(_, _) => p.format(formatFloat)
+        case other => other.toString
+    })
+    writer.write(formatedParams.mkString(" "))
     if (cmd.comment.nonEmpty) writer.write(' ')
     cmd.comment.foreach( c => {
       if (c contains '\n') {
@@ -34,11 +42,33 @@ class Printer(writer: BufferedWriter) {
     writer.newLine
   }
 
+  def header = {
+    for (p <- prefix) {
+        writer.write(p)
+        writer.newLine
+    }
+  }
+
+  def footer = {
+    for (s <- suffix) {
+        writer.write(s)
+        writer.newLine
+    }
+  }
+
+
   def apply(cmds: Seq[Command]): Unit = {
+    header
     cmds.foreach(apply)
+    footer
   }
 
 }
+
+class DefaultPrinter(writer: BufferedWriter) extends Printer(None, None, (x: Int) => x.toString, RealParam.format, writer)
+
+//not fully complient but better
+class RolandDGPrinter(writer: BufferedWriter) extends Printer(Some("%"), Some("%"), (x: Int) => f"$x%2d", (x: Double) => f"$x%.5f", writer)
 
 object Printer {
 
@@ -55,7 +85,7 @@ object Printer {
   }
 
   def apply(cmds: Seq[Command], out: BufferedWriter): Unit = {
-    val p = new Printer(out)
+    val p = new DefaultPrinter(out)
     p(cmds)
   }
 

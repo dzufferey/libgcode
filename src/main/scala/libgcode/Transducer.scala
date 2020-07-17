@@ -19,12 +19,13 @@ trait Transducer {
     init ++ cmds.flatMap(transform) ++ finish
   }
 
-  def transduce(input: BufferedReader, output: BufferedWriter) = {
+  def transduce(input: BufferedReader, output: BufferedWriter, mkPrinter: BufferedWriter => Printer = b => new DefaultPrinter(b) ) = {
     var read = 0
     var written = 0
-    val printer = new Printer(output)
+    val printer = mkPrinter(output)
     val header = init
     written += header.length
+    printer.header
     printer(header)
     while(input.ready()) {
       val line = input.readLine.trim
@@ -47,6 +48,7 @@ trait Transducer {
     val footer = finish
     written += footer.length
     printer(footer)
+    printer.footer
     output.flush
     (read, written)
   }

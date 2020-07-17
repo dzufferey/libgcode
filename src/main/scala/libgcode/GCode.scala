@@ -37,6 +37,7 @@ case class ParamT(ptype: ParamType) extends Param {
 case class RealParam(ptype: ParamType, value: Double) extends Param {
   assert(RealParam.is(ptype), ptype.toString + " is not a real valued parameter")
   override def toString = ptype.toString + RealParam.format(value)
+  def format(f: Double => String) = ptype.toString + f(value)
 }
 case class IntParam(ptype: ParamType, value: Int) extends Param {
   assert(IntParam.is(ptype), ptype.toString + " is not an integer valued parameter")
