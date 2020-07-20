@@ -68,7 +68,7 @@ class Printer(prefix: Option[String],
 class DefaultPrinter(writer: BufferedWriter) extends Printer(None, None, (x: Int) => x.toString, RealParam.format, writer)
 
 //not fully complient but better
-class RolandDGPrinter(writer: BufferedWriter) extends Printer(Some("%"), Some("%"), (x: Int) => f"$x%2d", (x: Double) => f"$x%.5f", writer)
+class RolandDGPrinter(writer: BufferedWriter) extends Printer(Some("%"), Some("%"), (x: Int) => f"$x%02d", (x: Double) => f"$x%.5f", writer)
 
 object Printer {
 
@@ -86,6 +86,23 @@ object Printer {
 
   def apply(cmds: Seq[Command], out: BufferedWriter): Unit = {
     val p = new DefaultPrinter(out)
+    p(cmds)
+  }
+
+  def rolandDG(cmds: Seq[Command] ): String = {
+    val s = new StringWriter()
+    val b = new BufferedWriter(s)
+    rolandDG(cmds, b)
+    b.close
+    s.toString
+  }
+
+  def rolandDG(cmds: Seq[Command], fileName: String): Unit = {
+    IO.writeInFile(fileName, (b: BufferedWriter) => rolandDG(cmds, b))
+  }
+
+  def rolandDG(cmds: Seq[Command], out: BufferedWriter): Unit = {
+    val p = new RolandDGPrinter(out)
     p(cmds)
   }
 

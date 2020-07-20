@@ -5,9 +5,9 @@ import dzufferey.utils.IO
 import fastparse._
 
 class ParserTest extends AnyFunSuite {
-  
+
   val path = "src/test/resources/"
-  
+
   def ok(p: P[_] => P[Any], str: String) = {
     parse(str, p) match {
       case Parsed.Success(v, _) => ()
@@ -21,7 +21,7 @@ class ParserTest extends AnyFunSuite {
       case other => sys.error(other.toString)
     }
   }
-  
+
   test("chunks") {
     check(Parser.cmdType(_), "G", CmdType.G)
     check(Parser.cmdType(_), "g", CmdType.G)
@@ -38,7 +38,7 @@ class ParserTest extends AnyFunSuite {
     ok(Parser.comment(_), "   ; home all axes")
     ok(Parser.cmd(_), "")
   }
-  
+
   def expectedNbrLineLoop(fName: String, n: Int) = {
     val raw = IO.readTextFile(path + fName)
     val commands = Parser(raw)
@@ -74,15 +74,15 @@ class ParserTest extends AnyFunSuite {
   test("sample 004") {
     expectedNbrLineLoop("sample004.gcode", 17)
   }
-  
+
   test("sample 005") {
     expectedNbrLineLoop("sample005.gcode", 3)
   }
-  
+
   test("sample 006") {
     expectedNbrLineLoop("sample006.gcode", 2)
   }
-  
+
   test("sample 007") {
     expectedNbrLineLoop("sample007.gcode", 94)
   }

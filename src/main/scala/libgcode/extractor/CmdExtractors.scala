@@ -11,7 +11,7 @@ class CmdExtractor(cmdType: CmdType.Value) {
   }
 
   def apply(code: Int, args: Param*) = Command(cmdType, Seq(code), args, None, None)
-  
+
   def apply(code1: Int, code2: Int, args: Param*) = Command(cmdType, Seq(code1, code2), args, None, None)
 
 }
@@ -23,7 +23,7 @@ object M extends CmdExtractor(CmdType.M) { }
 object O extends CmdExtractor(CmdType.O) { }
 
 object Empty {
-  
+
   def unapply(c: Command): Option[Seq[Param]] = c match {
     case Command(CmdType.Empty, Nil, parameters, _, _) => Some(parameters)
     case _ => None
