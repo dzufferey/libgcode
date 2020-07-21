@@ -4,7 +4,7 @@ organization := "io.github.dzufferey"
 
 version := "0.1-SNAPSHOT"
 
-scalaVersion := "2.13.2"
+scalaVersion := "2.13.3"
 
 scalacOptions in Compile ++= Seq(
     "-unchecked",
@@ -14,8 +14,8 @@ scalacOptions in Compile ++= Seq(
 
 
 libraryDependencies ++= Seq(
-  "com.lihaoyi" %% "fastparse" % "2.2.2",
-  "org.scalatest" %% "scalatest" % "3.1.1" % "test",
+  "com.lihaoyi" %% "fastparse" % "2.3.0",
+  "org.scalatest" %% "scalatest" % "3.2.0" % "test",
   "io.github.dzufferey" %% "misc-scala-utils" % "0.1-SNAPSHOT",
   "io.github.dzufferey" %% "almond-x3dom-model-viewer" % "0.1-SNAPSHOT"
 )
