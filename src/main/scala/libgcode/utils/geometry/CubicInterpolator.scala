@@ -1,0 +1,96 @@
+package libgcode.utils.geometry
+
+import scala.math
+
+class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
+                        m2: Double, n2: Double, o2: Double, p2: Double
+                       ) extends Curve2D[CubicInterpolator] {
+
+  def apply(u: Double) = {
+    assert(u >= 0 && u <= 1)
+    val u3 = math.pow(u, 3)
+    val u2 = math.pow(u, 2)
+    val a = m1*u3 + n1*u2 + o1*u + p1
+    val b = m2*u3 + n2*u2 + o2*u + p2
+    (a,b)
+  }
+
+  def length = {
+    val a = m1/4 + n1/3 + o1/2 + p1
+    val b = m2/4 + n2/3 + o2/2 + p2
+    math.hypot(a, b)
+  }
+
+  def derivative(u: Double) = {
+    val u2 = math.pow(u, 2)
+    val a = 3*m1*u2 + 2*n1*u + o1
+    val b = 3*m2*u2 + 2*n2*u + o2
+    (a,b)
+  }
+ 
+  def curvature(u: Double) = {
+    val (d1a,d1b) = derivative(u)
+    val d2a = 6 * m1 * u + 2 * n1
+    val d2b = 6 * m2 * u + 2 * n2
+    (d1a * d2b - d1b * d2a) / math.pow(d1a*d1a + d1b*d1b, 3/2)
+  }
+
+  //Approxomation based on the paper:
+  // "An offset spline approximation for plane cubic splines" by Reinhold Klass, 1983
+  // FIXME: instead we could compute the expected position/direction for a finite number of samples then use least square to minimize the error
+  def offset(x: Double) = {
+    def at(u: Double) = {
+      val (a, b) = apply(u)
+      val (na, nb) = normal(u)
+      val (da, db) = derivative(u)
+      val c = 1 + x*curvature(u)
+      //Because we are in the 2D case, it is simpler than in the paper
+      val ao = a + na * x
+      val bo = b + nb * x
+      val dao = da * c
+      val dbo = db * c
+      (ao, bo, dao, dbo)
+    }
+    val (a1, b1, da1, db1) = at(0)
+    val (a2, b2, da2, db2) = at(1)
+    CubicInterpolator(a1, b1, da1, db1, a2, b2, da2, db2)
+  }
+
+  def translate(ta: Double, tb: Double) = {
+    val (a1, b1) = apply(0)
+    val (a2, b2) = apply(1)
+    val (da1, db1) = derivative(0)
+    val (da2, db2) = derivative(1)
+    CubicInterpolator(a1 + ta, b1 + tb, da1, db1, a2 + ta, b2 + tb, da2, db2)
+  }
+
+  def flip = {
+    val (a1, b1) = apply(0)
+    val (a2, b2) = apply(1)
+    val (da1, db1) = derivative(0)
+    val (da2, db2) = derivative(1)
+    CubicInterpolator(a2, b2, -da2, -db2, a1, b1, -da1, -db1)
+  }
+
+}
+
+object CubicInterpolator {
+
+  def apply(a1: Double, b1: Double,         // start point
+            da1: Double, db1: Double,       // start derivative
+            a2: Double, b2: Double,         // end point
+            da2: Double, db2: Double) = {   // end derivative
+    //TODO sanity check for the parameters
+    // m x³ + n x² + o x + p
+    val m1 =   2*a1 +   da1 - 2*a2 + da2
+    val n1 = - 3*a1 - 2*da1 + 3*a2 - da2
+    val o1 = da1
+    val p1 = a1
+    val m2 =   2*b1 +   db1 - 2*b2 + db2
+    val n2 = - 3*b1 - 2*db1 + 3*b2 - db2
+    val o2 = db1
+    val p2 = b1
+    new CubicInterpolator(m1, n1, o1, p1,
+                          m2, n2, o2, p2)
+  }
+}
