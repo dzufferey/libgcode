@@ -5,7 +5,7 @@ import libgcode.extractor._
 
 object Drill {
 
-  // bottom of the hole is z-depth (assuming XY workingPlane)
+  // bottom of the hole is 'height - depth' (assuming XY workingPlane Z is the height)
   def apply(x: Double, y: Double, z: Double, depth: Double
            )(implicit conf: Config) = {
     val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]

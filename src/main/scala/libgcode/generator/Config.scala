@@ -34,6 +34,7 @@ class Config {
   var deltaPlunge = 1.0
 
   def endmillRadius = endmillDiameter / 2.0
+  def widthOfCut = endmillDiameter * stepOver
 
   def toWorkplane(x: Double, y: Double, z: Double) = workingPlane match {
     case Plane.XY => (x,y,z)
