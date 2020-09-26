@@ -80,4 +80,6 @@ class Config {
     case Plane.YZ => I(x)
   }
 
+  var roundingError = 1e-6
+
 }

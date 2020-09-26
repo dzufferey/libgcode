@@ -2,8 +2,8 @@ package libgcode.generator
 
 import libgcode.Command
 import libgcode.extractor._
-import scala.collection.mutable.ArrayBuffer
 import scala.math._
+import scala.collection.mutable.ArrayBuffer
 
 /** An appproximation of an Archimedean spiral with a serial of half circles.
  *  The spiral is terminated with a complete circle to get the right radius. */
@@ -41,13 +41,13 @@ object Spiral {
       (ra, rb)
     }
     //
-    val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
+    val buffer = ArrayBuffer.empty[Command]
     if (insideOut) {
       buffer += G(0, conf.x(a), conf.y(b))
       buffer += G(1, conf.z(c), F(conf.plungFeed))
       buffer += Empty(F(conf.feed))
       var currentRadius = 0.0
-      while (currentRadius < maxEffectiveRadius) {
+      while (currentRadius < maxEffectiveRadius - conf.roundingError) {
         // val (a1, b1) = toPos(currentRadius, true)
         val (a2, b2) = toPos(currentRadius + conf.widthOfCut / 2, false)
         currentRadius = min(maxEffectiveRadius, currentRadius - conf.widthOfCut)
@@ -77,7 +77,7 @@ object Spiral {
       }
       // now the spiral
       var currentRadius = maxEffectiveRadius
-      while (currentRadius > 0) {
+      while (currentRadius > conf.roundingError) {
         // val (a1, b1) = toPos(currentRadius, true)
         val (a2, b2) = toPos(currentRadius - conf.widthOfCut / 2, false)
         currentRadius = max(0.0, currentRadius - conf.widthOfCut)
