@@ -24,7 +24,7 @@ object Slot {
       //line in the middle then wider until the outside, and finishing pass at the end
       val centerLine = Line(a1, b1, a2, b2)
       buffer += G(0, conf.x(a1), conf.y(b1))
-      buffer += G(1, conf.z(c1 - currentDepth), F(conf.plungFeed))
+      buffer += G(1, conf.z(c1 - currentDepth), F(conf.plungeFeed))
       buffer += G(1, conf.x(a2), conf.y(b2), F(conf.feed))
       var currentRadius = 0.0
       var leftLine = centerLine

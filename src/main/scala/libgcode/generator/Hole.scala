@@ -35,7 +35,7 @@ object Hole {
           // drill ?
           buffer += G(0, conf.x(a), conf.y(b))
           buffer += G(0, conf.z(startC + conf.travelHeight))
-          buffer += G(1, conf.z(endC), F(conf.plungFeed))
+          buffer += G(1, conf.z(endC), F(conf.plungeFeed))
           buffer += G(0, conf.z(startC + conf.travelHeight))
           buffer += Empty(F(conf.feed))
         } else {
@@ -55,7 +55,7 @@ object Hole {
           // drill ?
           buffer += G(0, conf.x(a), conf.y(b))
           buffer += G(0, conf.z(startC + conf.travelHeight))
-          buffer += G(1, conf.z(endC), F(conf.plungFeed))
+          buffer += G(1, conf.z(endC), F(conf.plungeFeed))
           buffer += G(0, conf.z(startC + conf.travelHeight))
           buffer += Empty(F(conf.feed))
         } else {

@@ -44,7 +44,7 @@ object Spiral {
     val buffer = ArrayBuffer.empty[Command]
     if (insideOut) {
       buffer += G(0, conf.x(a), conf.y(b))
-      buffer += G(1, conf.z(c), F(conf.plungFeed))
+      buffer += G(1, conf.z(c), F(conf.plungeFeed))
       buffer += Empty(F(conf.feed))
       var currentRadius = 0.0
       while (currentRadius < maxEffectiveRadius - conf.roundingError) {
@@ -65,7 +65,7 @@ object Spiral {
       // first do a circle
       val (ra, rb) = toPos(maxEffectiveRadius)
       buffer += G(0, conf.x(ra), conf.y(rb))
-      buffer += G(1, conf.z(c), F(conf.plungFeed))
+      buffer += G(1, conf.z(c), F(conf.plungeFeed))
       buffer += Empty(F(conf.feed))
       circle(x, y, z, maxEffectiveRadius, clockwise, offset, buffer, conf)
       // do the finishing pass now that we are close to the outer diameter

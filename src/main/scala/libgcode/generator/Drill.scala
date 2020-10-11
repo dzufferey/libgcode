@@ -10,7 +10,7 @@ object Drill {
            )(implicit conf: Config) = {
     val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
     val (a,b,c) = conf.toWorkplane(x,y,z)
-    buffer += Empty(F(conf.plungFeed))
+    buffer += Empty(F(conf.plungeFeed))
     buffer += G(0, conf.x(a), conf.y(b))
     var currentDepth = 0.0
     while (currentDepth < depth) {

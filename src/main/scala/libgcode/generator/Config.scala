@@ -17,7 +17,7 @@ class Config {
   /** feed rate in the direction of the working plane */
   var feed = 200
   /** feed rate in the direction orthogonal to the working plane */
-  var plungFeed = 100
+  var plungeFeed = 100
   /** climb or conventional milling */
   var climb = true
 
