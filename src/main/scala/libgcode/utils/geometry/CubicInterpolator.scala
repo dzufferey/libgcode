@@ -15,6 +15,33 @@ class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
     (a,b)
   }
 
+  def get(a: Double, b: Double,
+          ignoreBounds: Boolean = false,
+          tolerance: Double = 1e-6) = {
+    //compute L2 distance, the corresponding derivative, and then use Newton's methods
+    def f(u: Double): Double = {
+      val (ua, ub) = apply(u)
+      math.hypot(ua - a, ub - b)
+    }
+    def fp(u: Double): Double = {
+      //chain rule (f(g(x)))' = f'(g(x)) ⋅ g'(x)
+      val (da, db) = derivative(u)
+      val (ua, ub) = apply(u)
+      0.5/f(u) * (2*(ua-a) * da + 2*(ub-b) * db) //TODO not sure about ua-a vs a-ua
+    }
+    libgcode.utils.newton(f, fp, 0.5, tolerance) match {
+      case Some(u) =>
+        if (ignoreBounds) {
+          Some(u)
+        } else if (u > -tolerance && u < 1.0 + tolerance) {
+          Some(clamp(0,1,u))
+        } else {
+          None
+        }
+      case None => None
+    }
+  }
+
   def length = {
     val a = m1/4 + n1/3 + o1/2 + p1
     val b = m2/4 + n2/3 + o2/2 + p2
@@ -27,7 +54,7 @@ class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
     val b = 3*m2*u2 + 2*n2*u + o2
     (a,b)
   }
- 
+
   def curvature(u: Double) = {
     val (d1a,d1b) = derivative(u)
     val d2a = 6 * m1 * u + 2 * n1

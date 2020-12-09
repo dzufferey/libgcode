@@ -10,7 +10,37 @@ class Line( a1: Double, b1: Double, // start
 
   def apply(u: Double) = {
     assert(u >= 0 && u <= 1)
-    (a1 + (a2 - a1) * u, b1 + (b2 - b1) * u)
+    val a =  linearInterpolation(a1, a2, u)
+    val b =  linearInterpolation(b1, b2, u)
+    (a, b)
+  }
+
+  def get(a: Double, b: Double,
+          ignoreBounds: Boolean = false,
+          tolerance: Double = 1e-6) = {
+    val u = linearInterpolationCoeff(a1, a2, a)
+    val v = linearInterpolationCoeff(b1, b2, b)
+    val w = (u+v) / 2
+    if (ignoreBounds) {
+      val aa = linearInterpolation(a1, a2, w)
+      val bb = linearInterpolation(b1, b2, w)
+      if (distance(a,b,aa,bb) <= tolerance) {
+        Some(w)
+      } else {
+        None
+      }
+    } else if (w >= tolerance && w <= 1 + tolerance) {
+      val w2 = clamp(0.0, 1.0, w)
+      val aa = linearInterpolation(a1, a2, w2)
+      val bb = linearInterpolation(b1, b2, w2)
+      if (distance(a,b,aa,bb) <= tolerance) {
+        Some(w2)
+      } else {
+        None
+      }
+    } else {
+      None
+    }
   }
 
   def length = {
@@ -20,7 +50,7 @@ class Line( a1: Double, b1: Double, // start
   def derivative(u: Double) = {
     (a2 - a1, b2 - b1)
   }
-  
+
   def curvature(u: Double) = {
     0.0
   }
@@ -38,6 +68,26 @@ class Line( a1: Double, b1: Double, // start
 
   def flip = {
     new Line(a2, b2, a1, b1)
+  }
+
+  /** Project the given point on the line and returns the corresponding point.
+   *  The method returns None is the projection falls outside the bounds.
+   */
+  def project(a: Double, b: Double,
+              ignoreBounds: Boolean = false,
+              tolerance: Double = 1e-6) = {
+    val xa = a - a1
+    val xb = b - b1
+    val (da, db) = direction(0)
+    val coeff = xa * da + xb * db
+    if (ignoreBounds) {
+      Some(a1 + coeff * da, b1 + coeff * db)
+    } else if (coeff >= -tolerance && coeff <= 1.0+tolerance) {
+      val c = clamp(0.0, 1.0, coeff)
+      Some(a1 + c * da, b1 + c * db)
+    } else {
+      None
+    }
   }
 
 }

@@ -7,6 +7,11 @@ trait Curve2D[A <: Curve2D[A]] {
 
   def apply(u: Double): (Double, Double)
 
+  /** Returns the parameter for a point on the curve */
+  def get(a: Double, b: Double,
+          ignoreBounds: Boolean = false,
+          tolerance: Double = 1e-6): Option[Double]
+
   def length: Double
 
   def derivative(u: Double): (Double, Double)
@@ -52,10 +57,10 @@ trait Curve2D[A <: Curve2D[A]] {
   }
 
   def flip: A
+  
+//TODO restrict to [x,y] with 0 ≤ x < y ≤ 1 (could even be wider to increase the bounds)
+//TODO project / closest
+//TODO intersection? for special cases, it is possible to have analytical solutions, for the rest we can use numerical opt.
 
-//TODO restrict to [x,y] with 0 ≤ x < y ≤ 1
-//TODO project
-//TODO from point on curve to u
-//TODO curvature (2nd derivative)
 
 }
