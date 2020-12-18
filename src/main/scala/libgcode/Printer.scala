@@ -28,14 +28,16 @@ class Printer(prefix: Option[String],
         case other => other.toString
     })
     writer.write(formatedParams.mkString(" "))
-    if (cmd.comment.nonEmpty) writer.write(' ')
+    if (cmd.comment.nonEmpty && (cmd.ctype != CmdType.Empty || cmd.parameters.nonEmpty)) {
+      writer.write(' ')
+    }
     cmd.comment.foreach( c => {
       if (c contains '\n') {
         writer.write("( ")
         writer.write(c)
         writer.write(" )")
       } else {
-        writer.write(';')
+        writer.write("; ")
         writer.write(c)
       }
     })

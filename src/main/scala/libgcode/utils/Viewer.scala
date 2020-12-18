@@ -71,31 +71,38 @@ class Viewer extends AbstractMachine {
                 val pitchOver2Pi = (x - this.x) / angle
                 (radius, angle, offset, pitchOver2Pi)
         }
-        val delta0 = circularInterpolationPrecision / 2 / math.Pi / radius
-        val delta = if (clockwise) -delta0 else delta0
-        assert(math.signum(delta) == math.signum(angle), s"delta: $delta, angle: $angle")
-        def pointAt(a: Double) = {
-            plane match {
-                case XY => (cx + radius * math.cos(a+offset), cy + radius * math.sin(a+offset), this.z + pitchOver2Pi * a)
-                case ZX => (cx + radius * math.sin(a+offset), this.y + pitchOver2Pi * a, cz + radius * math.cos(a+offset))
-                case YZ => (this.x + pitchOver2Pi * a, cy + radius * math.cos(a+offset), cz + radius * math.sin(a+offset))
-            }
+        if (angle == 0.0) {
+          // not moving at all
+          assert(x == this.x)
+          assert(y == this.y)
+          assert(z == this.z)
+        } else {
+          val delta0 = circularInterpolationPrecision / 2 / math.Pi / radius
+          val delta = if (clockwise) -delta0 else delta0
+          assert(math.signum(delta) == math.signum(angle), s"delta: $delta, angle: $angle, x: $getX → $x, y: $getY -> $y, z: $getZ → $z, i: $i, j: $j, k: $k")
+          def pointAt(a: Double) = {
+              plane match {
+                  case XY => (cx + radius * math.cos(a+offset), cy + radius * math.sin(a+offset), this.z + pitchOver2Pi * a)
+                  case ZX => (cx + radius * math.sin(a+offset), this.y + pitchOver2Pi * a, cz + radius * math.cos(a+offset))
+                  case YZ => (this.x + pitchOver2Pi * a, cy + radius * math.cos(a+offset), cz + radius * math.sin(a+offset))
+              }
+          }
+          var count = 2
+          val points = new StringBuilder()
+          var a = 0.0
+          val (x0, y0, z0) = pointAt(a)
+          points ++= s"${x0} ${y0} ${z0}"
+          while ((a - angle).abs > delta.abs + 1e-5) {
+              val a1 = a + delta
+              count += 1
+              val (x1, y1, z1) = pointAt(a1)
+              points ++= s", ${x1} ${y1} ${z1}"
+              a = a1
+          }
+          points ++= s", ${x} ${y} ${z}"
+          val line = shape(lineSet( vertexCount := count.toString )( coordinate( point := points.toString) ), lineAppearance("0 0 0") )
+          toDraw += line
         }
-        var count = 2
-        val points = new StringBuilder()
-        var a = 0.0
-        val (x0, y0, z0) = pointAt(a)
-        points ++= s"${x0} ${y0} ${z0}"
-        while ((a - angle).abs > delta.abs + 1e-5) {
-            val a1 = a + delta
-            count += 1
-            val (x1, y1, z1) = pointAt(a1)
-            points ++= s", ${x1} ${y1} ${z1}"
-            a = a1
-        }
-        points ++= s", ${x} ${y} ${z}"
-        val line = shape(lineSet( vertexCount := count.toString )( coordinate( point := points.toString) ), lineAppearance("0 0 0") )
-        toDraw += line
         super.circularMotion(_x,_y,_z,a,b,c,_i,_j,_k,clockwise,p,f)
     }
 

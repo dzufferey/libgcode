@@ -19,5 +19,13 @@ class ArcTest extends AnyFunSuite {
     assert(goodEnough(a.normal(1), (1.0, 0.0)))
     assert(a.curvature(0) == 1.0)
   }
+  
+  test("arc get") {
+    val a = Arc(0, 0, 1, 0, 2*math.Pi)
+    assert(a.get( 0.7071067811865475, 0.7071067811865475).isDefined)
+    assert(a.get( 0.7071067811865475,-0.7071067811865475).isDefined)
+    assert(a.get(-0.7071067811865475, 0.7071067811865475).isDefined)
+    assert(a.get(-0.7071067811865475,-0.7071067811865475).isDefined)
+  }
 
 }

@@ -31,4 +31,6 @@ object Empty {
 
   def apply(args: Param*) = Command(CmdType.Empty, Nil, args, None, None)
 
+  def comment(s: String) = Command(CmdType.Empty, Nil, Nil, None, Some(s))
+
 }

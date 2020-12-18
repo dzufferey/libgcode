@@ -175,7 +175,8 @@ class AbstractMachine {
     time += f * distance * 60000 // from mm/minutes to ms
   }
 
-  protected def findCenter( x1: Double, y1: Double,_x2: Double,_y2: Double,
+  protected def findCenter( x1: Double, y1: Double, // start position (machine state)
+                            _x2: Double, _y2: Double, // end position (from the command)
                             r: Double, clockwise: Boolean): (Double, Double) = {
     val x2 = if (useMillimeters) _x2 else 25.4 * _x2
     val y2 = if (useMillimeters) _y2 else 25.4 * _y2
@@ -186,15 +187,17 @@ class AbstractMachine {
     // vector from p₁ to p₂
     val dx = x2 - x1
     val dy = y2 - y1
-    // normal to d (take the direction into account)
-    val nx = (if (clockwise)  dy else -dy) / hypot(dx, dy)
-    val ny = (if (clockwise) -dx else  dx) / hypot(dx, dy)
     // how far from m should we go ???
     val toM2 = (mx - x1) * (mx - x1) + (my - y1) * (my - y1)
     val k = sqrt(r*r - toM2)
+    assert(!k.isNaN, s"could not find center: $x1 → $x2, $y1 → $y2, radius $r")
+    // normal to d (take the direction into account)
+    val nx = (if (clockwise)  dy else -dy) / hypot(dx, dy)
+    val ny = (if (clockwise) -dx else  dx) / hypot(dx, dy)
     val px = mx + nx * k
     val py = my + ny * k
-    (px, py)
+    if (useMillimeters) (px, py)
+    else (px / 25.4, py / 25.4)
   }
 
 
@@ -321,91 +324,98 @@ class AbstractMachine {
   }
 
   def run(cmd: Command): String = {
-    cmd match {
-      case G(m @ (0|1), 0, Seq()) =>    mode = m
-      case G(m @ (0|1), 0, params) =>
-        mode = m
-        handleLinear(params)
-      case G(dir @ (2|3), 0, Seq()) =>  mode = dir
-      case G(dir @ (2|3), 0, params) =>
-        mode = dir
-        handleRotate(params)
-      case G(4, 0, Seq(P(ms))) => time += ms
-      case G(4, 0, Seq(X(s))) =>  time += 1000 * s
-      case G(4, 0, Seq(S(s))) =>  time += 1000 * s
-      case G(17, 0, Seq()) =>   plane = XY
-      case G(18, 0, Seq()) =>   plane = ZX
-      case G(19, 0, Seq()) =>   plane = YZ
-      case G(20, 0, Seq()) =>   useMillimeters = false
-      case G(21, 0, Seq()) =>   useMillimeters = true
-      case G(28, 0, params) =>
-        if (params.isEmpty) {
-          x = 0
-          y = 0
-          z = 0
-          a = 0
-          b = 0
-          c = 0
-        } else {
-          params.foreach{
-            case ParamT(ParamType.X) => x = 0
-            case ParamT(ParamType.Y) => y = 0
-            case ParamT(ParamType.Z) => z = 0
-            case ParamT(ParamType.A) => a = 0
-            case ParamT(ParamType.B) => b = 0
-            case ParamT(ParamType.C) => c = 0
-            case other => sys.error("in G28, unexpected axis: " + other)
+    try {
+      cmd match {
+        case G(m @ (0|1), 0, Seq()) =>    mode = m
+        case G(m @ (0|1), 0, params) =>
+          mode = m
+          handleLinear(params)
+        case G(dir @ (2|3), 0, Seq()) =>  mode = dir
+        case G(dir @ (2|3), 0, params) =>
+          mode = dir
+          handleRotate(params)
+        case G(4, 0, Seq(P(ms))) => time += ms
+        case G(4, 0, Seq(X(s))) =>  time += 1000 * s
+        case G(4, 0, Seq(S(s))) =>  time += 1000 * s
+        case G(17, 0, Seq()) =>   plane = XY
+        case G(18, 0, Seq()) =>   plane = ZX
+        case G(19, 0, Seq()) =>   plane = YZ
+        case G(20, 0, Seq()) =>   useMillimeters = false
+        case G(21, 0, Seq()) =>   useMillimeters = true
+        case G(28, 0, params) =>
+          if (params.isEmpty) {
+            x = 0
+            y = 0
+            z = 0
+            a = 0
+            b = 0
+            c = 0
+          } else {
+            params.foreach{
+              case ParamT(ParamType.X) => x = 0
+              case ParamT(ParamType.Y) => y = 0
+              case ParamT(ParamType.Z) => z = 0
+              case ParamT(ParamType.A) => a = 0
+              case ParamT(ParamType.B) => b = 0
+              case ParamT(ParamType.C) => c = 0
+              case other => sys.error("in G28, unexpected axis: " + other)
+            }
           }
-        }
-      case G(80, 0, Seq()) =>
-        val z = if (initialLevelReturn) zInitial.get else zRetract.get
-        zInitial = None
-        zRetract = None
-        peckDistance = None
-        dwellTime = None
-        run(G(0, Z(z)))
-      case G(cycleKind @ (81 | 82 | 83), 0, params) =>
-        mode = cycleKind
-        handleDrillingCycle(params)
-      case G(90, 0, Seq()) =>   absoluteCoordinates = true
-      case G(91, 0, Seq()) =>   absoluteCoordinates = false
-      case G(92, 0, params) =>
-        assert(params.nonEmpty)
-        val coeff = if (useMillimeters) 1 else 25.4
-        params.foreach{
-          case X(v) => x = coeff * v
-          case Y(v) => y = coeff * v
-          case Z(v) => z = coeff * v
-          case A(v) => a = v
-          case B(v) => b = v
-          case C(v) => c = v
-          case other => sys.error("in G92 unexpected axis: " + other)
-        }
-      case G(98, 0, Seq()) => initialLevelReturn = true
-      case G(99, 0, Seq()) => initialLevelReturn = false
-      case M(3, 0, Seq(S(clockwise))) =>    spindleRPM = clockwise
-      case M(4, 0, Seq(S(cclockwise))) =>   spindleRPM = -cclockwise
-      case M(5, 0, Seq()) =>                spindleRPM = 0
-      case M(114, 0, Seq()) =>
-        if (useMillimeters) {
-          return "X:" + x + " Y:" + y + " Z:" + z + " A:" + a + " B:" + b + " C:" + c
-        } else {
-          return "X:" + x/25.4 + " Y:" + y/25.4 + " Z:" + z/25.4 + " A:" + a + " B:" + b + " C:" + c
-        }
-      case Empty( Seq(F(f))) =>
-        setFeed(f)
-      case Empty( Seq(T(i))) =>
-        selectedTool = i
-      case Empty(params) =>
-        if (mode == 0 || mode == 1) handleLinear(params)
-        else if (mode == 2 || mode == 3) handleRotate(params)
-        else if (mode == 81 || mode == 82 || mode == 83) handleDrillingCycle(params)
-        else sys.error("Command not supported or ill-formed: " + cmd)
-      case M(2, 0, Seq()) =>
-        () //end of program, not much to do
-      // XXX more commands
-      case _ =>
-        sys.error("Command not supported or ill-formed: " + cmd)
+        case G(80, 0, Seq()) =>
+          val z = if (initialLevelReturn) zInitial.get else zRetract.get
+          zInitial = None
+          zRetract = None
+          peckDistance = None
+          dwellTime = None
+          run(G(0, Z(z)))
+        case G(cycleKind @ (81 | 82 | 83), 0, params) =>
+          mode = cycleKind
+          handleDrillingCycle(params)
+        case G(90, 0, Seq()) =>   absoluteCoordinates = true
+        case G(91, 0, Seq()) =>   absoluteCoordinates = false
+        case G(92, 0, params) =>
+          assert(params.nonEmpty)
+          val coeff = if (useMillimeters) 1 else 25.4
+          params.foreach{
+            case X(v) => x = coeff * v
+            case Y(v) => y = coeff * v
+            case Z(v) => z = coeff * v
+            case A(v) => a = v
+            case B(v) => b = v
+            case C(v) => c = v
+            case other => sys.error("in G92 unexpected axis: " + other)
+          }
+        case G(98, 0, Seq()) => initialLevelReturn = true
+        case G(99, 0, Seq()) => initialLevelReturn = false
+        case M(3, 0, Seq(S(clockwise))) =>    spindleRPM = clockwise
+        case M(4, 0, Seq(S(cclockwise))) =>   spindleRPM = -cclockwise
+        case M(5, 0, Seq()) =>                spindleRPM = 0
+        case M(114, 0, Seq()) =>
+          if (useMillimeters) {
+            return "X:" + x + " Y:" + y + " Z:" + z + " A:" + a + " B:" + b + " C:" + c
+          } else {
+            return "X:" + x/25.4 + " Y:" + y/25.4 + " Z:" + z/25.4 + " A:" + a + " B:" + b + " C:" + c
+          }
+        case Empty( Seq(F(f))) =>
+          setFeed(f)
+        case Empty( Seq(T(i))) =>
+          selectedTool = i
+        case Empty(params) =>
+          if (mode == 0 || mode == 1) handleLinear(params)
+          else if (mode == 2 || mode == 3) handleRotate(params)
+          else if (mode == 81 || mode == 82 || mode == 83) handleDrillingCycle(params)
+          else sys.error("Command not supported or ill-formed: " + cmd)
+        case M(2, 0, Seq()) =>
+          () //end of program, not much to do
+        // XXX more commands
+        case _ =>
+          sys.error("Command not supported or ill-formed: " + cmd)
+      }
+    } catch {
+      case e: Throwable =>
+        Console.err.println(s"error processing: $cmd")
+        Console.err.println(s"internal state: x = $x, y = $y, z = $z")
+        throw e
     }
     ""
   }

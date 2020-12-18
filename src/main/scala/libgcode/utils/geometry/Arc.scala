@@ -22,8 +22,12 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
           ignoreBounds: Boolean = false,
           tolerance: Double = 1e-6) = {
     if (compare( distance(a,b,this.a,this.b), r, tolerance) == 0) {
-      val angle = math.atan2(b - this.b, a - this.a)
-      val u = linearInterpolationCoeff(alpha, beta, angle)
+      val angle = math.atan2(b - this.b, a - this.a) // angle ∈ [-π,π]
+      // alpha, beta not necessarily in the same interval as angle
+      val kAlpha = (alpha - angle) / (2 * math.Pi)
+      //val kBeta = (beta - angle) / (2 * math.Pi)
+      val k = if (alpha < beta) kAlpha.ceil else kAlpha.floor
+      val u = linearInterpolationCoeff(alpha, beta, angle + k*2*math.Pi)
       if (ignoreBounds) {
         Some(u)
       } else if (u >= - tolerance && u <= 1.0 + tolerance) {
@@ -50,7 +54,11 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
   }
 
   def offset(x: Double) = {
-    new Arc(a, b, r+x, alpha, beta)
+    if (alpha < beta) {
+      new Arc(a, b, r-x, alpha, beta)
+    } else {
+      new Arc(a, b, r+x, alpha, beta)
+    }
   }
 
   def translate(ta: Double, tb: Double) = {
@@ -110,6 +118,7 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     } else {
       var ts = Seq[Line]()
       val d = Line(a, b, arc.a, arc.b).length
+      // checks that there is an intersection with the line and the arc
       def onCircle(l: Line) = {
         ???
       }
@@ -159,6 +168,12 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     //inner for tangent: is the crossing point ?
     //outer tangent: reduce to point and smaller circle then offset
     //degenerate cases: reduce to point and larger circle then offset
+  }
+  
+  def intersectLine(l: Line,
+                    ignoreBounds: Boolean = false,
+                    tolerance: Double = 1e-6) = {
+    l.intersectArc(this, ignoreBounds, tolerance)
   }
 
 }

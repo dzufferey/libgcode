@@ -16,4 +16,23 @@ class LineTest extends AnyFunSuite {
     assert(l.curvature(0) == 0)
   }
 
+  test("line cart eq") {
+    assert(Line(0, 0, 0, 1).cartesianCoeff == (-1.0,0.0,0.0))
+    assert(Line(0, 0, 1, 0).cartesianCoeff == (0.0,1.0,0.0))
+  }
+
+  test("line insersection") {
+    assert(Line(0, 0, 0, 1).intersectLine(Line(0, 0, 1, 0)).isDefined)
+    assert(Line(0, 0, 1, 1).intersectLine(Line(0, 0, 0, 1)).isDefined)
+    assert(Line(0, 0, 0, 1).intersectLine(Line(0, 0, 0, 1)).isDefined)
+  }
+
+  test("arc insersection") {
+    assert(Line(0, 0, 0, 1).intersectArc(Arc(0, 0, 1, 0, 2*math.Pi)) == Seq((0.0, 1.0)))
+    assert(Line(0, 0, 0, 1).intersectArc(Arc(0, 0, 1, 0, 2*math.Pi), true) == Seq((0.0,-1.0), (0.0,1.0)))
+    assert(Line(1, -1, 1, 1).intersectArc(Arc(0, 0, 1, 0, 2*math.Pi)) == Seq((1.0,0.0)))
+    assert(Line(1, -1, 1, 1).intersectArc(Arc(0, 0, 1, 0, 2*math.Pi), true) == Seq((1.0,0.0)))
+    assert(Line(-1, -1, 1, 1).intersectArc(Arc(0, 0, 1, 0, 2*math.Pi)).size == 2)
+  }
+
 }
