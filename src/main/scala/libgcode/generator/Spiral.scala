@@ -21,10 +21,10 @@ object Spiral {
     buffer += G(dir, conf.x(a + ra), conf.y(b + rb), conf.i( ra), conf.j( rb))
   }
     
-  def noFinishing(x: Double, y: Double, z: Double, // center
-            radius: Double, insideOut: Boolean = true,
-            offset: Double = 0.0
-           )(implicit conf: Config) = {
+  def roughing(x: Double, y: Double, z: Double, // center
+               radius: Double, insideOut: Boolean = true,
+               offset: Double = 0.0
+              )(implicit conf: Config) = {
     // compute the width of the cut so we are doing full turns
     val maxEffectiveRadius = radius - conf.endmillRadius
     val nTurn = (maxEffectiveRadius / conf.widthOfCut).ceil.toInt
@@ -56,10 +56,14 @@ object Spiral {
       buffer += G(dir, conf.x(a2), conf.y(b2), conf.i(ra1), conf.j(rb1))
       buffer += G(dir, conf.x(a3), conf.y(b3), conf.i(ra2), conf.j(rb2))
     }
-    if (insideOut) {
-      buffer += G(0, conf.x(a), conf.y(b))
+    def toZ = {
+      buffer += G(0, conf.z(c + math.max(conf.depthOfCut, conf.travelHeight)))
       buffer += G(1, conf.z(c), F(conf.plungeFeed))
       buffer += Empty(F(conf.feed))
+    }
+    if (insideOut) {
+      buffer += G(0, conf.x(a), conf.y(b))
+      toZ
       var currentRadius = 0.0
       while (currentRadius < maxEffectiveRadius - conf.roundingError) {
         val oldRadius = currentRadius
@@ -71,8 +75,7 @@ object Spiral {
       // first do a circle
       val (ra, rb) = toPos(maxEffectiveRadius)
       buffer += G(0, conf.x(ra), conf.y(rb))
-      buffer += G(1, conf.z(c), F(conf.plungeFeed))
-      buffer += Empty(F(conf.feed))
+      toZ
       circle(x, y, z, maxEffectiveRadius, clockwise, offset, buffer, conf)
       // now the spiral
       var currentRadius = maxEffectiveRadius
@@ -87,6 +90,13 @@ object Spiral {
     buffer.toSeq
   }
 
+  def finishing(x: Double, y: Double, z: Double, // center
+            radius: Double, insideOut: Boolean = true,
+            offset: Double = 0.0
+           )(implicit conf: Config) = {
+    roughing(x, y, z, radius, insideOut, offset)(conf)
+  }
+
   def apply(x: Double, y: Double, z: Double, // center
             radius: Double, insideOut: Boolean = true,
             offset: Double = 0.0
@@ -94,11 +104,11 @@ object Spiral {
     if (conf.finishingPass > 0.0) {
       val (a,b,c) = conf.toWorkplane(x,y,z)
       val (x2,y2,z2) = conf.fromWorkplane(a,b,c+conf.finishingPass)
-      val rough = noFinishing(x2, y2, z2, radius - conf.finishingPass, insideOut, offset)(conf)
-      val finish = noFinishing(x, y, z, radius, insideOut, offset)(conf)
+      val rough = roughing(x2, y2, z2, radius - conf.finishingPass, insideOut, offset)(conf)
+      val finish = finishing(x, y, z, radius, insideOut, offset)(conf)
       rough ++ finish
     } else {
-      noFinishing(x, y, z, radius, insideOut, offset)(conf)
+      roughing(x, y, z, radius, insideOut, offset)(conf)
     }
   }
 

@@ -67,7 +67,7 @@ class Printer(prefix: Option[String],
 
 }
 
-class DefaultPrinter(writer: BufferedWriter) extends Printer(None, None, (x: Int) => x.toString, RealParam.format, writer)
+class DefaultPrinter(writer: BufferedWriter) extends Printer(None, None, (x: Int) => x.toString, (x: Double) => f"$x%.5f", writer)
 
 //not fully complient but better
 class RolandDGPrinter(writer: BufferedWriter) extends Printer(Some("%"), Some("%"), (x: Int) => f"$x%02d", (x: Double) => f"$x%.5f", writer)
