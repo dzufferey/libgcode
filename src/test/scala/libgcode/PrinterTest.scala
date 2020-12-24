@@ -12,7 +12,7 @@ class PrinterTest extends AnyFunSuite {
       M(6),
       M(2)
     )
-    val expected = """G0 X0 Y0 Z0
+    val expected = """G0 X0.00000 Y0.00000 Z0.00000
                      |T2
                      |M6
                      |M2
