@@ -7,7 +7,7 @@ import Plane._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.StringBuilder
 
-import io.github.dzufferey.x3DomViewer._
+import com.github.dzufferey.x3DomViewer._
 import scalatags.Text.all._
 import X3D._
 
@@ -123,7 +123,7 @@ object Viewer {
             almond.display.Text(lines.map(_.render).mkString("\n"))
         } else {
             val lines = tracer.result
-            io.github.dzufferey.x3DomViewer.Viewer.display(lines, conf)
+            com.github.dzufferey.x3DomViewer.Viewer.display(lines, conf)
         }
     }
 

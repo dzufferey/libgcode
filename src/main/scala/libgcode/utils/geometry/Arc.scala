@@ -95,10 +95,56 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
         val (na, nb) = l.normal(0.0)
         Seq(Line(a - na/2, b - nb/2, a + na/2, b + nb/2))
       } else if (c > 0) { // 2 tangents
+        // let (x,y) be the point of the tangence
+        // we can find the two solutions by solving
+        //   (x-a1,y-b2)·(x-a,y-b) = 0
+        //   |(x-a,y-b)| = r
+        //   |(x-a1,y-b1)|² = r² + |(a-a1,b-b1)|²
+        // this is 3 equations with up to quadratic terms over x,y.
         ???
       } else {
         Seq()
       }
+    }
+  }
+
+  // checks that there is an intersection with the line and the arc
+  protected def onCircle(l: Line, tolerance: Double) = {
+    val pts = l.intersectArc(this, true, tolerance)
+    pts.size > 0 //TODO check derivative for tangent
+  }
+
+  protected def putOnCircle(l: Line, tolerance: Double) = {
+    val l1 = l.offset(r)
+    if (onCircle(l1, tolerance)) {
+      l1
+    } else {
+      val l2 = l.offset(-r)
+      assert(onCircle(l2, tolerance))
+      l2
+    }
+  }
+
+  protected def tangentInBounds(l: Line, ignoreBounds: Boolean, tolerance: Double) = {
+    l.intersectArc(this, ignoreBounds, tolerance).size > 0
+  }
+
+  def innerTangents(arc: Arc,
+                    ignoreBounds: Boolean = false,
+                    tolerance: Double = 1e-6): Seq[Line] = {
+    val is = Arc(arc.a, arc.b, arc.r + r, 0, 2*math.Pi).tangents2Point(a, b, true, tolerance)
+    is.map(putOnCircle(_, tolerance)).filter( tangentInBounds(_, ignoreBounds, tolerance) )
+  }
+
+  def outerTangents(arc: Arc,
+                    ignoreBounds: Boolean = false,
+                    tolerance: Double = 1e-6): Seq[Line] = {
+    if (compare(r, arc.r, tolerance) == 0) {
+      val l = Line(a, b, arc.a, arc.b)
+      Seq(l.offset(r), l.offset(-r)).filter( tangentInBounds(_, ignoreBounds, tolerance) )
+    } else {
+      val os = Arc(arc.a, arc.b, arc.r - r, 0, 2*math.Pi).tangents2Point(a, b, true, tolerance)
+      os.map(putOnCircle(_, tolerance)).filter( tangentInBounds(_, ignoreBounds, tolerance) )
     }
   }
 
@@ -118,58 +164,20 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     } else {
       var ts = Seq[Line]()
       val d = Line(a, b, arc.a, arc.b).length
-      // checks that there is an intersection with the line and the arc
-      def onCircle(l: Line) = {
-        ???
-      }
-      def putOnCircle(l: Line) = {
-        val l1 = l.offset(r)
-        if (onCircle(l1)) {
-          l1
-        } else {
-          val l2 = l.offset(-r)
-          assert(onCircle(l2))
-          l2
-        }
-      }
-      def outer = {
-        if (compare(r, arc.r, tolerance) == 0) {
-          val l = Line(a, b, arc.a, arc.b)
-          Seq(l.offset(r), l.offset(-r))
-        } else {
-          val os = Arc(arc.a, arc.b, arc.r - r, 0, 2*math.Pi).tangents2Point(a, b)
-          os.map(putOnCircle)
-        }
-      }
-      def inner = {
-        val is = Arc(arc.a, arc.b, arc.r + r, 0, 2*math.Pi).tangents2Point(a, b)
-        if (is.length == 1) {
-          ??? //TODO special case
-        } else {
-          is.map(putOnCircle)
-        }
-      }
       val c1 = compare(d, r + arc.r, tolerance)
       val c2 = compare(d, r - arc.r, tolerance)
       if (c1 >= 0) { // 4 or 3 tangents
-        ts ++= outer
-        ts ++= inner
+        ts ++= outerTangents(arc, ignoreBounds, tolerance)
+        ts ++= innerTangents(arc, ignoreBounds, tolerance)
       } else if (c1 < 0 && c2 > 0) { // 2 tangents
-        ts ++= outer
+        ts ++= outerTangents(arc, ignoreBounds, tolerance)
       } else if (c1 < 0 && c2 == 0) { // 1 tangent
-        ???
+        ts ++= innerTangents(arc, ignoreBounds, tolerance)
       } // else no tangent
-      //TODO filter the ones that match the angles
-      def inBounds(l: Line) = {
-        ???
-      }
-      ts.filter(inBounds)
+      ts
     }
-    //inner for tangent: is the crossing point ?
-    //outer tangent: reduce to point and smaller circle then offset
-    //degenerate cases: reduce to point and larger circle then offset
   }
-  
+
   def intersectLine(l: Line,
                     ignoreBounds: Boolean = false,
                     tolerance: Double = 1e-6) = {

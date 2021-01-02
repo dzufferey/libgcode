@@ -33,6 +33,9 @@ class LineTest extends AnyFunSuite {
     assert(Line(1, -1, 1, 1).intersectArc(Arc(0, 0, 1, 0, 2*math.Pi)) == Seq((1.0,0.0)))
     assert(Line(1, -1, 1, 1).intersectArc(Arc(0, 0, 1, 0, 2*math.Pi), true) == Seq((1.0,0.0)))
     assert(Line(-1, -1, 1, 1).intersectArc(Arc(0, 0, 1, 0, 2*math.Pi)).size == 2)
+    assert(Line(-1, -1, 1, 1).intersectArc(Arc(0, 0, 1, 0, math.Pi)).size == 1)
+    assert(Line(-1, -1, 1, 1).intersectArc(Arc(0, 0, 1, math.Pi/2, math.Pi)).size == 0)
+    assert(Line(-1, -1, -1, 1).intersectArc(Arc(0, 0, 0.9, 0, 2*math.Pi)).size == 0)
   }
 
 }
