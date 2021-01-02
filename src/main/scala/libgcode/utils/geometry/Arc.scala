@@ -95,13 +95,38 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
         val (na, nb) = l.normal(0.0)
         Seq(Line(a - na/2, b - nb/2, a + na/2, b + nb/2))
       } else if (c > 0) { // 2 tangents
+        // solution from https://mathworld.wolfram.com/CircleTangentLine.html
+        val a0 = a - a1
+        val b0 = b - b1
+        val denom = a0*a0 + b0*b0
+        val num0 = -r*a0 + b0 * math.sqrt(denom - r*r)
+        val num1 = -r*a0 - b0 * math.sqrt(denom - r*r)
+        val angles = Seq( math.acos(num0 / denom),
+                         -math.acos(num0 / denom),
+                          math.acos(num1 / denom),
+                         -math.acos(num1 / denom))
+        val sortedAngles = angles.sorted
+        val (uniqueAngles, _) = sortedAngles.foldLeft(Seq.empty[Double], 10.0)( (acc, t) => {
+          val (seq, t0) = acc
+          if (compare(t, t0, tolerance) == 0) {
+            acc
+          } else {
+            (seq :+ t, t)
+          }
+        })
+        val tangents = for (t <- uniqueAngles;
+                            a2 <- Some(a + r*math.cos(t));
+                            b2 <- Some(b + r*math.sin(t))
+                            if compare((a2 - a1) * (a2 - a) + (b2 - b1) * (b2 - b), 0, tolerance) == 0)
+                       yield Line(a1, b1, a2, b2)
+        tangents.filter(tangentInBounds(_, ignoreBounds, tolerance))
+        // alternative
         // let (x,y) be the point of the tangence
         // we can find the two solutions by solving
         //   (x-a1,y-b2)·(x-a,y-b) = 0
         //   |(x-a,y-b)| = r
         //   |(x-a1,y-b1)|² = r² + |(a-a1,b-b1)|²
         // this is 3 equations with up to quadratic terms over x,y.
-        ???
       } else {
         Seq()
       }

@@ -28,4 +28,22 @@ class ArcTest extends AnyFunSuite {
     assert(a.get(-0.7071067811865475,-0.7071067811865475).isDefined)
   }
 
+  test("arc tangent2Point") {
+    val a = Arc(0, 0, 1, 0, 2*math.Pi)
+    assert(a.tangents2Point( 0, 0).size == 0)
+    assert(a.tangents2Point( 1, 0).size == 1)
+    assert(a.tangents2Point( 2, 0).size == 2)
+  }
+
+  test("arc tangent2Arc") {
+    val a0 = Arc(0, 0, 1, 0, 2*math.Pi)
+    val a1 = Arc(0, 1, 1, 0, 2*math.Pi)
+    val a2 = Arc(0, 2, 1, 0, 2*math.Pi)
+    val a3 = Arc(0, 3, 1, 0, 2*math.Pi)
+    assert(a0.tangents2Arc(a0).size == 0)
+    assert(a0.tangents2Arc(a1).size == 2)
+    assert(a0.tangents2Arc(a2).size == 3)
+    assert(a0.tangents2Arc(a3).size == 4)
+  }
+
 }
