@@ -1,10 +1,11 @@
-package libgcode.utils.geometry
+package libgcode.utils.geometry2D
 
+import libgcode.utils._
 import scala.math
 
 class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
                         m2: Double, n2: Double, o2: Double, p2: Double
-                       ) extends Curve2D[CubicInterpolator] {
+                       ) extends Curve[CubicInterpolator] {
 
   def apply(u: Double) = {
     assert(u >= 0 && u <= 1)
@@ -65,6 +66,7 @@ class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
   //Approxomation based on the paper:
   // "An offset spline approximation for plane cubic splines" by Reinhold Klass, 1983
   // FIXME: instead we could compute the expected position/direction for a finite number of samples then use least square to minimize the error
+  // TODO check https://raphlinus.github.io/curves/2021/03/11/bezier-fitting.html for a better solution
   def offset(x: Double) = {
     def at(u: Double) = {
       val (a, b) = apply(u)
@@ -97,6 +99,50 @@ class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
     val (da1, db1) = derivative(0)
     val (da2, db2) = derivative(1)
     CubicInterpolator(a2, b2, -da2, -db2, a1, b1, -da1, -db1)
+  }
+
+  def restrict(lb: Double, ub: Double): CubicInterpolator = {
+    //TODO this may be an approx ...
+    val (a1, b1) = apply(0)
+    val (a2, b2) = apply(1)
+    val (da1, db1) = derivative(0)
+    val (da2, db2) = derivative(1)
+    CubicInterpolator(a1, b1, da1, db1, a2, b2, da2, db2)
+  }
+  
+  def intersectLine(l: Line,
+                    ignoreBounds: Boolean = false,
+                    tolerance: Double = 1e-6) = {
+    //TODO coordinate change so 'l' is the x-axis, then solve resulting cubic equations
+    val (a,b,c) = l.cartesianCoeff
+    ???
+  }
+
+  def intersectArc(arc: Arc,
+                   ignoreBounds: Boolean = false,
+                   tolerance: Double = 1e-6): Seq[(Double,Double)] = {
+    ???
+  }
+  
+  def intersectCubic(c: CubicInterpolator,
+                     ignoreBounds: Boolean = false,
+                     tolerance: Double = 1e-6): Seq[(Double,Double)] = {
+    ???
+  }
+
+  //TODO intersect
+  def intersect(c: AbsCurve, ignoreBounds: Boolean, tolerance: Double): Seq[(Double, Double)] = {
+    if (c.isInstanceOf[Arc]) {
+      this.intersectArc(c.asInstanceOf[Arc], ignoreBounds, tolerance)
+    } else if (c.isInstanceOf[Line]) {
+      this.intersectLine(c.asInstanceOf[Line], ignoreBounds, tolerance)
+    } else if (c.isInstanceOf[CubicInterpolator]) {
+      this.intersectCubic(c.asInstanceOf[CubicInterpolator], ignoreBounds, tolerance)
+    } else if (c.isInstanceOf[Path]) {
+      c.intersect(this, ignoreBounds, tolerance)
+    } else {
+      sys.error(s"does not know how to intersect $this and $c")
+    }
   }
 
 }

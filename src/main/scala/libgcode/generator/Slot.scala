@@ -2,7 +2,7 @@ package libgcode.generator
 
 import libgcode.Command
 import libgcode.extractor._
-import libgcode.utils.geometry._
+import libgcode.utils.geometry2D._
 
 object Slot {
 

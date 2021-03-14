@@ -1,4 +1,4 @@
-package libgcode.utils.geometry
+package libgcode.utils.geometry2D
 
 import org.scalatest.funsuite.AnyFunSuite
 import scala.math

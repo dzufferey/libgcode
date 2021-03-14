@@ -1,13 +1,13 @@
-package libgcode.utils.geometry
+package libgcode.utils.geometry2D
 
+import libgcode.utils._
 import scala.math
 
 class Line( a1: Double, b1: Double, // start
             a2: Double, b2: Double  // end
-          ) extends Curve2D[Line] {
+          ) extends Curve[Line] {
 
-  assert(compare(a1, a2, 1e-6) != 0 ||
-         compare(b1, b2, 1e-6) != 0)
+  assert(!compare((a1, b1), (a2, b2), 1e-6))
 
   def apply(u: Double) = {
     assert(u >= 0 && u <= 1)
@@ -104,6 +104,14 @@ class Line( a1: Double, b1: Double, // start
     (na, nb, -(na*a1 + nb*b1))
   }
 
+  def restrict(_lb: Double, _ub: Double): Line = {
+    val la =  linearInterpolation(a1, a2, _lb)
+    val lb =  linearInterpolation(b1, b2, _lb)
+    val ua =  linearInterpolation(a1, a2, _ub)
+    val ub =  linearInterpolation(b1, b2, _ub)
+    new Line(la, lb, ua, ub)
+  }
+
   def intersectLine(l2: Line,
                     ignoreBounds: Boolean = false,
                     tolerance: Double = 1e-6): Option[(Double,Double)] = {
@@ -164,16 +172,8 @@ class Line( a1: Double, b1: Double, // start
     val b = 2*(distA*da + distB*db)
     val c = distA*distA + distB*distB - arc.radius*arc.radius
     // solve the equation
-    var solutions = Seq.empty[Double]
-    if (compare(a, 0.0, tolerance) != 0) {
-      val b24ac = b*b - 4*a*c
-      if (compare(b24ac, 0.0, tolerance) == 1) {
-        solutions +:= (-b + math.sqrt(b24ac)) / (2*a)
-        solutions +:= (-b - math.sqrt(b24ac)) / (2*a)
-      } else if (compare(b24ac, 0.0, tolerance) == 0) {
-        solutions +:= -b / (2*a)
-      }
-    }
+    val solutions = roots(a, b, c, tolerance)
+    // check bounds
     val onLine = solutions.flatMap[(Double,Double)](k => {
       if (ignoreBounds) {
         Some((a1+k*da, b1+k*db))
@@ -186,6 +186,22 @@ class Line( a1: Double, b1: Double, // start
     })
     val onCircle = onLine.filter{ case (a, b) => arc.get(a, b, ignoreBounds, tolerance).isDefined }
     onCircle
+  }
+  
+  def intersect(c: AbsCurve,
+                ignoreBounds: Boolean = false,
+                tolerance: Double = 1e-6): Seq[(Double, Double)] = {
+    if (c.isInstanceOf[Arc]) {
+      this.intersectArc(c.asInstanceOf[Arc], ignoreBounds, tolerance)
+    } else if (c.isInstanceOf[Line]) {
+      this.intersectLine(c.asInstanceOf[Line], ignoreBounds, tolerance).toSeq
+    } else if (c.isInstanceOf[CubicInterpolator]) {
+      c.intersect(this, ignoreBounds, tolerance)
+    } else if (c.isInstanceOf[Path]) {
+      c.intersect(this, ignoreBounds, tolerance)
+    } else {
+      sys.error(s"does not know how to intersect $this and $c")
+    }
   }
 
 }

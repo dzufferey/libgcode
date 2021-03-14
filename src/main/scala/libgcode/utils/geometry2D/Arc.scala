@@ -1,5 +1,6 @@
-package libgcode.utils.geometry
+package libgcode.utils.geometry2D
 
+import libgcode.utils._
 import scala.math
 
 /** parameters
@@ -8,7 +9,7 @@ import scala.math
  * - alpha: start angle
  * - beta: end angle
  */
-class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val beta: Double) extends Curve2D[Arc] {
+class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val beta: Double) extends Curve[Arc] {
 
   assert(r > 0 && alpha != beta && (alpha - beta).abs <= 2 * math.Pi)
 
@@ -85,7 +86,7 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
   def tangents2Point(a1: Double, b1: Double,
                      ignoreBounds: Boolean = false,
                      tolerance: Double = 1e-6): Seq[Line] = {
-    if (compare(a, a1, tolerance) == 0 && compare(b, b1, tolerance) == 0) {
+    if (compare((a, b), (a1, b1), tolerance)) {
       Seq()
     } else {
       val l = Line(a, b, a1, b1)
@@ -182,7 +183,7 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
   def tangents2Arc(arc: Arc,
                    ignoreBounds: Boolean = false,
                    tolerance: Double = 1e-6): Seq[Line] = {
-    if (compare(a, arc.a, tolerance) == 0 && compare(b, arc.b, tolerance) == 0) { //degenerate case
+    if (compare(centerOfRotation, arc.centerOfRotation, tolerance)) { //degenerate case
       Seq()
     } else if (r > arc.r) {
       arc.tangents2Arc(this, ignoreBounds, tolerance).map(_.flip) //this has the smaller radius
@@ -203,10 +204,55 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     }
   }
 
+  def restrict(lb: Double, ub: Double): Arc = {
+    val newAlpha = linearInterpolation(alpha, beta, lb)
+    val newBeta = linearInterpolation(alpha, beta, ub)
+    new Arc(a, b, r, newAlpha, newBeta)
+  }
+
   def intersectLine(l: Line,
                     ignoreBounds: Boolean = false,
                     tolerance: Double = 1e-6) = {
     l.intersectArc(this, ignoreBounds, tolerance)
+  }
+
+  def intersectArc(arc: Arc,
+                   ignoreBounds: Boolean = false,
+                   tolerance: Double = 1e-6): Seq[(Double,Double)] = {
+    val d = distance(a, b, arc.a, arc.b)
+    val dr = (radius - arc.radius).abs
+    val sr = radius + arc.radius
+    val cdr = compare(d, dr, tolerance)
+    val csr = compare(d, sr, tolerance)
+    if (d < tolerance) {
+      // corner case: same center
+      ???
+    } else if (cdr == 0 || csr == 0) {
+      // 1 intersection point
+      ???
+    } else if (cdr > 0 && csr < 0) {
+      // 2 intersection points
+      ???
+    } else {
+      // no intersection
+      Seq.empty
+    }
+  }
+
+  def intersect(c: AbsCurve,
+                ignoreBounds: Boolean = false,
+                tolerance: Double = 1e-6): Seq[(Double, Double)] = {
+    if (c.isInstanceOf[Arc]) {
+      this.intersectArc(c.asInstanceOf[Arc], ignoreBounds, tolerance)
+    } else if (c.isInstanceOf[Line]) {
+      this.intersectLine(c.asInstanceOf[Line], ignoreBounds, tolerance)
+    } else if (c.isInstanceOf[CubicInterpolator]) {
+      c.intersect(this, ignoreBounds, tolerance)
+    } else if (c.isInstanceOf[Path]) {
+      c.intersect(this, ignoreBounds, tolerance)
+    } else {
+      sys.error(s"does not know how to intersect $this and $c")
+    }
   }
 
 }

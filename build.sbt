@@ -15,6 +15,7 @@ scalacOptions in Compile ++= Seq(
 resolvers += "jitpack" at "https://jitpack.io"
 
 libraryDependencies ++= Seq(
+  "org.apache.commons" % "commons-math3" % "3.6.1",
   "com.lihaoyi" %% "fastparse" % "2.3.0",
   "org.scalatest" %% "scalatest" % "3.2.1" % "test",
   "com.github.dzufferey" %% "misc-scala-utils" % "1.0.0",

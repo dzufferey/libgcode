@@ -11,7 +11,7 @@ object Helix {
   def apply(x: Double, y: Double, z: Double,
             radius: Double, pitch: Double, nbrTurns: Int,
             clockwise: Boolean, offset: Double = 0,
-            backToStart: Boolean = false
+            backToStart: Boolean = false, flatBottom: Boolean = false
            )(implicit conf: Config) = {
     val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
     buffer += Empty.comment(s"Helix")
@@ -30,6 +30,10 @@ object Helix {
     for (n <- 0 until nbrTurns) yield {
       buffer += G(dir, conf.x(a - ra), conf.y(b - rb), conf.i(-ra), conf.j(-rb), conf.z(c + n*pitch + pitch/2))
       buffer += G(dir, conf.x(a + ra), conf.y(b + rb), conf.i( ra), conf.j( rb), conf.z(c + n*pitch + pitch))
+    }
+    if (flatBottom) {
+      buffer += G(dir, conf.x(a - ra), conf.y(b - rb), conf.i(-ra), conf.j(-rb))
+      buffer += G(dir, conf.x(a + ra), conf.y(b + rb), conf.i( ra), conf.j( rb))
     }
     if (feed < conf.feed) {
       buffer += Empty(F(conf.feed))

@@ -1,10 +1,11 @@
-package libgcode.utils.geometry
+package libgcode.utils.geometry2D
 
+import libgcode.utils._
 import scala.math
 
-
-trait Curve2D[A <: Curve2D[A]] {
-
+/** Abstract 2D curve */
+trait AbsCurve {
+  
   def apply(u: Double): (Double, Double)
 
   /** Returns the parameter for a point on the curve */
@@ -42,10 +43,6 @@ trait Curve2D[A <: Curve2D[A]] {
     (a + na * r, b + nb * r)
   }
 
-  def offset(x: Double): A
-
-  def translate(a: Double, b: Double): A 
-
   def startFrom(a: Double, b: Double) = {
     val (a0, b0) = apply(0)
     translate(a - a0, b - b0)
@@ -56,11 +53,36 @@ trait Curve2D[A <: Curve2D[A]] {
     translate(a - a0, b - b0)
   }
 
-  def flip: A
-  
-//TODO restrict to [x,y] with 0 ≤ x < y ≤ 1 (could even be wider to increase the bounds)
-//TODO project / closest
-//TODO intersection? for special cases, it is possible to have analytical solutions, for the rest we can use numerical opt.
+  def offset(x: Double): AbsCurve
 
+  def translate(a: Double, b: Double): AbsCurve
+
+  def flip: AbsCurve
+
+  //restrict to [x,y] with 0 ≤ x < y ≤ 1 (could even be wider to increase the bounds ?)
+  def restrict(lb: Double, ub: Double): AbsCurve
+
+  def intersect(c: AbsCurve,
+                ignoreBounds: Boolean = false,
+                tolerance: Double = 1e-6): Seq[(Double, Double)]
+  
+  // simple curve are C2, path can have lesser continuity
+  def continuity: Continuity.Continuity = {
+    Continuity.C2
+  }
+
+  //TODO project / closest
+
+}
+
+trait Curve[A <: Curve[A]] extends AbsCurve {
+
+  def offset(x: Double): A
+
+  def translate(a: Double, b: Double): A 
+
+  def flip: A
+
+  def restrict(lb: Double, ub: Double): A
 
 }

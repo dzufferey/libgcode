@@ -106,7 +106,7 @@ class AbstractMachine {
 
   protected def circularMotion(_x: Double,_y: Double,_z: Double, // end position
                                 a: Double, b: Double, c: Double, // end orientation
-                               _i: Double,_j: Double,_k: Double, // center of rotation
+                               _i: Double,_j: Double,_k: Double, // center of rotation (relative coord)
                                clockwise: Boolean, p: Int, f: Double) = { // number of turns and feedrate
     // equation of an helix:
     // x(t) = a * cos(t)
@@ -240,9 +240,9 @@ class AbstractMachine {
     var b = getB
     var c = getC
     //circle given either by R (radius), or IJK (center relative to the start)
-    var i = x
-    var j = y
-    var k = z
+    var i = 0.0
+    var j = 0.0
+    var k = 0.0
     var r = 0.0
     // P is the number of turn
     var p = 0
