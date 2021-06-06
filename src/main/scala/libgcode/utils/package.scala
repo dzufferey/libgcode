@@ -48,8 +48,12 @@ package object utils {
     math.min(max, math.max(min, value))
   }
 
-  def linearInterpolation(x: Double, y: Double, u: Double) = {
+  def linearInterpolation(x: Double, y: Double, u: Double): Double = {
     x + u * (y - x)
+  }
+
+  def linearInterpolation(x: (Double,Double), y: (Double,Double), u: Double): (Double,Double) = {
+    (linearInterpolation(x._1, y._1, u), linearInterpolation(x._2, y._2, u))
   }
 
   def linearInterpolationCoeff(x: Double, y: Double, a: Double) = {

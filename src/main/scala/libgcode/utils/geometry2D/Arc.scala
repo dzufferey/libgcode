@@ -224,15 +224,55 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     val sr = radius + arc.radius
     val cdr = compare(d, dr, tolerance)
     val csr = compare(d, sr, tolerance)
+    def inBounds(p: (Double, Double)) = {
+      val (a,b) = p
+      get(a,b,false,tolerance).isDefined &&
+      arc.get(a,b,false,tolerance).isDefined
+    }
     if (d < tolerance) {
       // corner case: same center
-      ???
+      if (ignoreBounds) {
+        Seq(apply(0))
+      } else {
+        val candidates = Seq(apply(0), apply(1), arc(0), arc(1))
+        candidates.find(inBounds) match {
+          case Some(pt) => Seq(pt)
+          case None => Seq.empty
+        }
+      }
     } else if (cdr == 0 || csr == 0) {
       // 1 intersection point
-      ???
+      val pt = if (csr == 0) {
+          val l = Line(a, b, arc.a, arc.b)
+          l(r / sr)
+        } else {
+          // cannot use Line as u ∉ [0,1]
+          val u = if (radius - arc.radius > 0) radius / d else -radius / d
+          linearInterpolation(centerOfRotation, arc.centerOfRotation, u)
+        }
+      if (ignoreBounds) {
+        Seq(pt)
+      } else {
+        if (inBounds(pt)) {
+          Seq(pt)
+        } else {
+          Seq.empty
+        }
+      }
     } else if (cdr > 0 && csr < 0) {
       // 2 intersection points
-      ???
+      // reduce to line intersection, https://mathworld.wolfram.com/Circle-CircleIntersection.html
+      val x = (d*d - arc.radius*arc.radius + radius*radius) / (2*d)
+      val l = Line(a, b, arc.a, arc.b)
+      val (da,db) = l.direction(0)
+      val l2 = Line(a, b, a + da*x, b + db*x)
+      val (ma,mb) = l2(1)
+      val (na,nb) = l2.normal(1)
+      val l3 = Line(ma,mb,ma+na,mb+nb)
+      val i0 = intersectLine(l3, true, tolerance)
+      val i = i0.filter(inBounds)
+      assert(i.length == 2)
+      i
     } else {
       // no intersection
       Seq.empty

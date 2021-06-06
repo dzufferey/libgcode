@@ -120,8 +120,7 @@ object Hole {
       val startC = endC + helixDepth
       val (x2,y2,z2) = conf.fromWorkplane(a, b, startC)
       val (_, _, z3) = conf.fromWorkplane(a, b, endC)
-      val clockwise = conf.climb
-      buffer ++= Helix(x2, y2, z2, radius - conf.endmillRadius, -conf.depthOfCut, nTurns, clockwise)
+      buffer ++= Helix(x2, y2, z2, radius - conf.endmillRadius, -conf.depthOfCut, nTurns, !conf.climb)
       buffer ++= Spiral.finishing(x2, y2, z3, radius, false)
     }
     toNeutral

@@ -4,10 +4,9 @@ import libgcode.utils._
 import scala.math
 
 //TODO param to make the param depend on the length
-class Path(val children: IndexedSeq[AbsCurve],
-           tolerance: Double = 1e-6) extends Curve[Path] {
+class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
 
-  assert(isConntected)
+  assert(isConntected(1e-6)) //TODO
 
   protected def expand(u: Double): (Int, Double) = {
     assert(u >= 0 && u <= 1)
@@ -58,12 +57,12 @@ class Path(val children: IndexedSeq[AbsCurve],
 
   def translate(a: Double, b: Double): Path = {
     val c2 = children.map( c => c.translate(a, b) )
-    new Path(c2, tolerance)
+    new Path(c2)
   }
 
   def flip: Path = {
     val c2 = children.map( c => c.flip )
-    new Path(c2.reverse, tolerance)
+    new Path(c2.reverse)
   }
 
   def restrict(lb: Double, ub: Double): Path = {
@@ -74,7 +73,7 @@ class Path(val children: IndexedSeq[AbsCurve],
     val middle = children.slice(li+1, ui-1)
     val end = children(ui).restrict(0.0, uc)
     val newChildren = start +: middle :+ end
-    new Path(newChildren, tolerance)
+    new Path(newChildren)
   }
 
   def intersect(c: AbsCurve,
@@ -83,7 +82,7 @@ class Path(val children: IndexedSeq[AbsCurve],
     children.flatMap( c2 => c2.intersect(c, ignoreBounds, tolerance) )
   }
 
-  protected def isConntected: Boolean = {
+  protected def isConntected(tolerance: Double = 1e-6): Boolean = {
     (0 until children.size -1).forall( i => {
       val (a0, b0) = children(i)(1)
       val (a1, b1) = children(i+1)(0)
@@ -91,14 +90,14 @@ class Path(val children: IndexedSeq[AbsCurve],
     })
   }
 
-  override def continuity: Continuity.Continuity = {
+  override def continuity(tolerance: Double = 1e-6): Continuity.Continuity = {
     //TODO child could be a Path ...
-    val upper = children.size + (if (isClosed) 0 else -1)
+    val upper = children.size + (if (isClosed(tolerance)) 0 else -1)
     var g1 = true
     var c1 = true
     var sameRoC = true
     (0 until upper).foreach( i => {
-      children(i).continuity match {
+      children(i).continuity(tolerance) match {
         case Continuity.C0 =>
           g1 = false
           c1 = false
@@ -137,17 +136,19 @@ class Path(val children: IndexedSeq[AbsCurve],
     }
   }
 
-  def isClosed: Boolean = {
+  def isClosed(tolerance: Double = 1e-6): Boolean = {
     compare(apply(0), apply(1), tolerance)
   }
 
-  def selfIntersections: Int = {
+  def selfIntersections(tolerance: Double = 1e-6): Int = {
+    //careful as cubic curves can intersect with themselves ?!
     ???
   }
 
   // Could use https://github.com/jbuckmccready/CavalierContours for reference
   // should return a Seq[Path]
   def offset(x: Double): Path = {
+    val tolerance: Double = 1e-6 //TODO
     // the offset may result in degenerate curves
     val stack = scala.collection.mutable.Stack[AbsCurve]()
     var lastOffsetFailed = false
@@ -156,7 +157,8 @@ class Path(val children: IndexedSeq[AbsCurve],
         val c2 = c.offset(x)
         //TODO see if it connects to the previous
         // - if no intersection potentially insert an arc to connect
-        // - need to check for intersection and restrict if needed
+        // - need to check for intersection and restrict/split if needed
+        //   there can be multiple intersections ...
         val previous = stack.pop()
         ???
         lastOffsetFailed = false // connection may be hard when some segement disappeared
@@ -165,8 +167,8 @@ class Path(val children: IndexedSeq[AbsCurve],
           lastOffsetFailed = true
       }
     }
-    val p = new Path(stack.toIndexedSeq, tolerance)
-    assert(!isClosed || p.isClosed) // small sanity check
+    val p = new Path(stack.toIndexedSeq)
+    assert(!isClosed(tolerance) || p.isClosed(tolerance)) // small sanity check
     p
     // then we should postprocess and remove self-intersection introduced by the offset
   }

@@ -9,10 +9,14 @@ class Line( a1: Double, b1: Double, // start
 
   assert(!compare((a1, b1), (a2, b2), 1e-6))
 
+  override def toString = {
+    s"Line($a1, $b1, $a2, $b2)"
+  }
+
   def apply(u: Double) = {
     assert(u >= 0 && u <= 1)
-    val a =  linearInterpolation(a1, a2, u)
-    val b =  linearInterpolation(b1, b2, u)
+    val a = linearInterpolation(a1, a2, u)
+    val b = linearInterpolation(b1, b2, u)
     (a, b)
   }
 

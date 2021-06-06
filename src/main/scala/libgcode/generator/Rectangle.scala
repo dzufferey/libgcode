@@ -3,8 +3,9 @@ package libgcode.generator
 import libgcode.Command
 import libgcode.abstractmachine.Plane
 import libgcode.extractor._
+import libgcode.utils.evenSteps
 import scala.math._
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{AbstractBuffer, ArrayBuffer}
 
 /** Pocket/Surface a rectangle. */
 object Rectangle {
@@ -22,12 +23,31 @@ object Rectangle {
             width: Double, length: Double, depth: Double,
             inside: Boolean = true
            )(implicit conf: Config) = {
+    //TODO currently ignores the finishing pass!
     assert(conf.workingPlane == Plane.XY, "Currently only for XY working plane") //FIXME makes the assertion works for the other planes
+    val cmds = ArrayBuffer.empty[Command]
+    val (nTurn, effectiveDoC) = evenSteps(z, z - depth, conf.depthOfCut)
+    for (i <- 0 until nTurn) {
+        layer(x, y, z + i * effectiveDoC,
+              width, length, effectiveDoC.abs,
+              inside, false, cmds)
+        cmds += G(0, Z(z + i * effectiveDoC + conf.travelHeight))
+    }
+    cmds += G(0, Z(z + conf.travelHeight))
+    cmds.toSeq
+  }
+
+
+  def layer(x: Double, y: Double, z: Double, // lower left corner
+            width: Double, length: Double, depth: Double,
+            inside: Boolean = true, backToStart: Boolean = true,
+            _buffer: AbstractBuffer[Command] = null
+           )(implicit conf: Config) = {
     assert(!inside || width >= conf.endmillDiameter)
     assert(!inside || length >= conf.endmillDiameter)
     assert(depth >= 0.0, "depth should be positive")
     assert(depth <= conf.depthOfCut, "Should not plung more than the depth of cut")
-    val buffer = ArrayBuffer.empty[Command]
+    val buffer = if (_buffer != null) _buffer else ArrayBuffer.empty[Command]
     // go to initial position
     val (a,b,c) = conf.toWorkplane(x,y,z)
     val (da,db,dc) = conf.toWorkplane(width,length,depth)
@@ -98,8 +118,14 @@ object Rectangle {
       delta += conf.widthOfCut
     }
     // go to a neutral position
-    buffer += G(0, conf.z(c + conf.travelHeight))
-    buffer.toSeq
+    if (backToStart) {
+      buffer += G(0, conf.z(c + conf.travelHeight))
+    }
+    if (_buffer == null) {
+      buffer.toSeq
+    } else {
+      null
+    }
   }
 
 }

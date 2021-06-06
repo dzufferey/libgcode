@@ -102,35 +102,37 @@ class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
   }
 
   def restrict(lb: Double, ub: Double): CubicInterpolator = {
-    //TODO this may be an approx ...
+    //TODO this is an approx ...
     val (a1, b1) = apply(0)
     val (a2, b2) = apply(1)
     val (da1, db1) = derivative(0)
     val (da2, db2) = derivative(1)
     CubicInterpolator(a1, b1, da1, db1, a2, b2, da2, db2)
   }
-  
+
   def intersectLine(l: Line,
                     ignoreBounds: Boolean = false,
                     tolerance: Double = 1e-6) = {
     //TODO coordinate change so 'l' is the x-axis, then solve resulting cubic equations
     val (a,b,c) = l.cartesianCoeff
+    // https://www.particleincell.com/2013/cubic-line-intersection/
     ???
   }
 
   def intersectArc(arc: Arc,
                    ignoreBounds: Boolean = false,
                    tolerance: Double = 1e-6): Seq[(Double,Double)] = {
-    ???
-  }
-  
-  def intersectCubic(c: CubicInterpolator,
-                     ignoreBounds: Boolean = false,
-                     tolerance: Double = 1e-6): Seq[(Double,Double)] = {
+    // http://www.kevlindev.com/gui/math/intersection/Intersection.js
     ???
   }
 
-  //TODO intersect
+  def intersectCubic(c: CubicInterpolator,
+                     ignoreBounds: Boolean = false,
+                     tolerance: Double = 1e-6): Seq[(Double,Double)] = {
+    // http://www.kevlindev.com/gui/math/intersection/Intersection.js
+    ???
+  }
+
   def intersect(c: AbsCurve, ignoreBounds: Boolean, tolerance: Double): Seq[(Double, Double)] = {
     if (c.isInstanceOf[Arc]) {
       this.intersectArc(c.asInstanceOf[Arc], ignoreBounds, tolerance)

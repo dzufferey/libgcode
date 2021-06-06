@@ -5,7 +5,7 @@ import scala.math
 
 /** Abstract 2D curve */
 trait AbsCurve {
-  
+
   def apply(u: Double): (Double, Double)
 
   /** Returns the parameter for a point on the curve */
@@ -67,7 +67,7 @@ trait AbsCurve {
                 tolerance: Double = 1e-6): Seq[(Double, Double)]
   
   // simple curve are C2, path can have lesser continuity
-  def continuity: Continuity.Continuity = {
+  def continuity(tolerance: Double = 1e-6): Continuity.Continuity = {
     Continuity.C2
   }
 

@@ -46,4 +46,29 @@ class ArcTest extends AnyFunSuite {
     assert(a0.tangents2Arc(a3).size == 4)
   }
 
+  test("arc insersection") {
+    val a0 = Arc(0, 0, 1, 0, 2*math.Pi)
+    val a1 = Arc(0, 1, 1, 0, 2*math.Pi)
+    val a2 = Arc(0, 2, 1, 0, 2*math.Pi)
+    val a3 = Arc(0, 3, 1, 0, 2*math.Pi)
+    val a4 = Arc(0, 0.5, 0.5, 0, 2*math.Pi)
+    val a5 = Arc(0, 0.5, 1.0, 0, 2*math.Pi)
+    val a6 = Arc(0, 1.5, 1.0, 0, 2*math.Pi)
+    val a7 = Arc(0, 0.75, 0.5, 0, 2*math.Pi)
+    assert(a0.intersectArc(a0) == Seq((1.0,0.0)))
+    assert(a0.intersectArc(a3) == Seq())
+    assert(a0.intersectArc(a2) == Seq((0.0,1.0)))
+    assert(a2.intersectArc(a0) == Seq((0.0,1.0)))
+    assert(a0.intersectArc(a1) == Seq((0.8660254037844386,0.5),(-0.8660254037844386,0.5)))
+    assert(a1.intersectArc(a0) == Seq((-0.8660254037844386,0.5),(0.8660254037844386,0.5)))
+    assert(a0.intersectArc(a4) == Seq((0.0,1.0)))
+    assert(a4.intersectArc(a0) == Seq((0.0,1.0)))
+    assert(a0.intersectArc(a5) == Seq((0.9682458365518543,0.25),(-0.9682458365518543,0.25)))
+    assert(a5.intersectArc(a0) == Seq((-0.9682458365518543,0.25),(0.9682458365518543,0.25)))
+    assert(a0.intersectArc(a6) == Seq((0.6614378277661477,0.75),(-0.6614378277661477,0.75)))
+    assert(a6.intersectArc(a0) == Seq((-0.6614378277661477,0.75),(0.6614378277661477,0.75)))
+    assert(a0.intersectArc(a7) == Seq((0.4841229182759271,0.875),(-0.4841229182759271,0.875)))
+    assert(a7.intersectArc(a0) == Seq((0.4841229182759271,0.875),(-0.4841229182759271,0.875)))
+  }
+
 }
