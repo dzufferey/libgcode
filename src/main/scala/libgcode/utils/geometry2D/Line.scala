@@ -1,6 +1,9 @@
 package libgcode.utils.geometry2D
 
 import libgcode.utils._
+import libgcode.generator.Config
+import libgcode.Command
+import libgcode.extractor._
 import scala.math
 
 class Line( a1: Double, b1: Double, // start
@@ -191,7 +194,7 @@ class Line( a1: Double, b1: Double, // start
     val onCircle = onLine.filter{ case (a, b) => arc.get(a, b, ignoreBounds, tolerance).isDefined }
     onCircle
   }
-  
+
   def intersect(c: AbsCurve,
                 ignoreBounds: Boolean = false,
                 tolerance: Double = 1e-6): Seq[(Double, Double)] = {
@@ -206,6 +209,10 @@ class Line( a1: Double, b1: Double, // start
     } else {
       sys.error(s"does not know how to intersect $this and $c")
     }
+  }
+
+  def toGCode(config: Config): Seq[Command] = {
+    Seq(G(1, config.x(a2), config.y(b2)))
   }
 
 }

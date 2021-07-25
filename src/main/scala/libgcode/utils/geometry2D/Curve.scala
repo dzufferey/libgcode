@@ -1,6 +1,8 @@
 package libgcode.utils.geometry2D
 
 import libgcode.utils._
+import libgcode.generator.Config
+import libgcode.Command
 import scala.math
 
 /** Abstract 2D curve */
@@ -70,6 +72,9 @@ trait AbsCurve {
   def continuity(tolerance: Double = 1e-6): Continuity.Continuity = {
     Continuity.C2
   }
+
+  //assumes the machine is at the start position and the feedrate is already set
+  def toGCode(config: Config): Seq[Command]
 
   //TODO project / closest
 

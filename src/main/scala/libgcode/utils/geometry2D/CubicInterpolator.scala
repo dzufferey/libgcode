@@ -1,6 +1,9 @@
 package libgcode.utils.geometry2D
 
 import libgcode.utils._
+import libgcode.generator.Config
+import libgcode.Command
+import libgcode.extractor._
 import scala.math
 
 class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
@@ -145,6 +148,12 @@ class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
     } else {
       sys.error(s"does not know how to intersect $this and $c")
     }
+  }
+
+  def toGCode(config: Config): Seq[Command] = {
+    //TODO approximate by lines and arcs to create a path and then covert that to g-code
+    // try bi arc, check max deviation and refine if needed
+    ???
   }
 
 }

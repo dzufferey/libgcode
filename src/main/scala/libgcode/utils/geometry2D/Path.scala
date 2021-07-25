@@ -1,6 +1,8 @@
 package libgcode.utils.geometry2D
 
 import libgcode.utils._
+import libgcode.generator.Config
+import libgcode.Command
 import scala.math
 
 //TODO param to make the param depend on the length
@@ -173,7 +175,16 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
     // then we should postprocess and remove self-intersection introduced by the offset
   }
 
+  def toGCode(config: Config): Seq[Command] = {
+    children.flatMap(_.toGCode(config))
+  }
+
   //is convex / convex hull ?
 
 }
 
+object Path {
+
+  def apply(children: IndexedSeq[AbsCurve]) = new Path(children)
+
+}

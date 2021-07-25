@@ -1,6 +1,9 @@
 package libgcode.utils.geometry2D
 
 import libgcode.utils._
+import libgcode.generator.Config
+import libgcode.Command
+import libgcode.extractor._
 import scala.math
 
 /** parameters
@@ -75,6 +78,10 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
   }
 
   def radius = r
+
+  def ccw = alpha <= beta
+
+  def cw = beta <= alpha
 
   /** Returns the tangents between the given point and the arc.
    *  The method first computes the tangents to the two circle and
@@ -293,6 +300,13 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     } else {
       sys.error(s"does not know how to intersect $this and $c")
     }
+  }
+
+  def toGCode(config: Config): Seq[Command] = {
+    val (a0,b0) = apply(0.0)
+    val (a1,b1) = apply(1.0)
+    val dir = if (cw) 2 else 3
+    Seq(G(dir, config.x(a1), config.y(b1), config.i(a0 - a), config.j(b0 - b)))
   }
 
 }
