@@ -8,7 +8,7 @@ import scala.math
 //TODO param to make the param depend on the length
 class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
 
-  assert(isConntected(1e-6)) //TODO
+  assert(isConntected(1e-6), s"not connected $children") //TODO
 
   protected def expand(u: Double): (Int, Double) = {
     assert(u >= 0 && u <= 1)

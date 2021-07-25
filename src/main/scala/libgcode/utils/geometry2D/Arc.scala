@@ -14,7 +14,11 @@ import scala.math
  */
 class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val beta: Double) extends Curve[Arc] {
 
-  assert(r > 0 && alpha != beta && (alpha - beta).abs <= 2 * math.Pi)
+  assert(r > 0 && alpha != beta && (alpha - beta).abs <= 2 * math.Pi, s"invalid $this")
+
+  override def toString = {
+    s"Arc($a, $b, $r, $alpha, $beta)"
+  }
 
   def apply(u: Double) = {
     assert(u >= 0 && u <= 1)
@@ -147,13 +151,13 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     pts.size > 0 //TODO check derivative for tangent
   }
 
-  protected def putOnCircle(l: Line, tolerance: Double) = {
+  protected def putOnCircles(l: Line, a: Arc, tolerance: Double) = {
     val l1 = l.offset(r)
-    if (onCircle(l1, tolerance)) {
+    if (onCircle(l1, tolerance) && a.onCircle(l1, tolerance)) {
       l1
     } else {
       val l2 = l.offset(-r)
-      assert(onCircle(l2, tolerance))
+      assert(onCircle(l2, tolerance) && a.onCircle(l2, tolerance))
       l2
     }
   }
@@ -166,7 +170,7 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
                     ignoreBounds: Boolean = false,
                     tolerance: Double = 1e-6): Seq[Line] = {
     val is = Arc(arc.a, arc.b, arc.r + r, 0, 2*math.Pi).tangents2Point(a, b, true, tolerance)
-    is.map(putOnCircle(_, tolerance)).filter( tangentInBounds(_, ignoreBounds, tolerance) )
+    is.map(putOnCircles(_, arc, tolerance)).filter( tangentInBounds(_, ignoreBounds, tolerance) )
   }
 
   def outerTangents(arc: Arc,
@@ -177,7 +181,7 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
       Seq(l.offset(r), l.offset(-r)).filter( tangentInBounds(_, ignoreBounds, tolerance) )
     } else {
       val os = Arc(arc.a, arc.b, arc.r - r, 0, 2*math.Pi).tangents2Point(a, b, true, tolerance)
-      os.map(putOnCircle(_, tolerance)).filter( tangentInBounds(_, ignoreBounds, tolerance) )
+      os.map(putOnCircles(_, arc, tolerance)).filter( tangentInBounds(_, ignoreBounds, tolerance) )
     }
   }
 
