@@ -28,9 +28,13 @@ object Hole {
     val z3 = conf.fromWorkplane(a,b,endC)._3
 
     def toNeutral = {
-      buffer += G(0, conf.z(endC + conf.travelHeight))
-      buffer += G(0, conf.x(a), conf.y(b))
-      buffer += G(0, conf.z(startC + conf.travelHeight))
+      if (insideOut) {
+        buffer += G(0, conf.z(endC + conf.travelHeight))
+        buffer += G(0, conf.x(a), conf.y(b))
+        buffer += G(0, conf.z(startC + conf.travelHeight))
+      } else {
+        buffer += G(0, conf.z(startC + conf.travelHeight))
+      }
     }
 
     if (depthFirst) {

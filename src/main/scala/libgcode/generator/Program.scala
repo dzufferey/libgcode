@@ -7,7 +7,7 @@ import libgcode.abstractmachine.Plane
 import java.io._
 import java.nio.file._
 
-abstract class Program(conf: Config) {
+abstract class Program(val conf: Config) {
 
   def header = Seq(
     conf.workingPlane match {

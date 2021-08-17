@@ -51,17 +51,13 @@ A few sample classes of g-code transformers:
 
 have an abstract machine to simulate the code, i.e., get the state of the machine at any point in time.
 
-The state of the machine is:
-* position: x,y,z
-* orientation: i,j,k
-* unit: inch | mm
-* feedrate: unit / min
-* plane: XY | ZX | YZ
-* position: absolute | relative
-* spindle: off | clockwise | counter-clockwise (RPM?)
-* coolant: off | mist | flood
-* ? cutter radius compensation
-* ? tool lenght offset
-* ? extruder(s) feedrate/position
-* ? value of other parameters
+Extend the abstract machine to
+* estimate machining time
+* keep track of
+  - spindle: off | clockwise | counter-clockwise (RPM?)
+  - coolant: off | mist | flood
+  - ? cutter radius compensation
+  - ? tool length offset
+  - ? extruder(s) feedrate/position
+  - ? value of other parameters
 
