@@ -25,6 +25,9 @@ class LineTest extends AnyFunSuite {
     assert(Line(0, 0, 0, 1).intersectLine(Line(0, 0, 1, 0)).isDefined)
     assert(Line(0, 0, 1, 1).intersectLine(Line(0, 0, 0, 1)).isDefined)
     assert(Line(0, 0, 0, 1).intersectLine(Line(0, 0, 0, 1)).isDefined)
+    assert(Line(0, 0, 1, 1).intersectLine(Line(1, 0, 0, 1)).isDefined)
+    assert(Line(0, 0, 1, 1).intersectLine(Line(0, 1, 1, 0)).isDefined)
+    assert(Line(0.0, 0.2, 1.0, 0.2).intersect(Line(0.8, 0.0, 0.8, 1.0)).length == 1)
   }
 
   test("arc insersection") {

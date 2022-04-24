@@ -71,7 +71,7 @@ class Line( a1: Double, b1: Double, // start
     0.0
   }
 
-  def offset(x: Double) = {
+  def offset(x: Double, tolerance: Double = 1e-6) = {
     val (na , nb) = normal(0)
     val a = na * x
     val b = nb * x
@@ -150,7 +150,7 @@ class Line( a1: Double, b1: Double, // start
         None
       }
     } else {
-      val k = num / denom
+      val k = - num / denom
       if (ignoreBounds) {
         Some(a1 + k * da, b1 + k * db)
       } else if (k >= -tolerance && k <= 1.0+tolerance) {

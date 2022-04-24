@@ -61,7 +61,7 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     (beta - alpha).sign / r
   }
 
-  def offset(x: Double) = {
+  def offset(x: Double, tolerance: Double = 1e-6) = {
     if (alpha < beta) {
       new Arc(a, b, r-x, alpha, beta)
     } else {
@@ -152,11 +152,11 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
   }
 
   protected def putOnCircles(l: Line, a: Arc, tolerance: Double) = {
-    val l1 = l.offset(r)
+    val l1 = l.offset(r, tolerance)
     if (onCircle(l1, tolerance) && a.onCircle(l1, tolerance)) {
       l1
     } else {
-      val l2 = l.offset(-r)
+      val l2 = l.offset(-r, tolerance)
       assert(onCircle(l2, tolerance) && a.onCircle(l2, tolerance))
       l2
     }
@@ -178,7 +178,7 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
                     tolerance: Double = 1e-6): Seq[Line] = {
     if (compare(r, arc.r, tolerance) == 0) {
       val l = Line(a, b, arc.a, arc.b)
-      Seq(l.offset(r), l.offset(-r)).filter( tangentInBounds(_, ignoreBounds, tolerance) )
+      Seq(l.offset(r, tolerance), l.offset(-r, tolerance)).filter( tangentInBounds(_, ignoreBounds, tolerance) )
     } else {
       val os = Arc(arc.a, arc.b, arc.r - r, 0, 2*math.Pi).tangents2Point(a, b, true, tolerance)
       os.map(putOnCircles(_, arc, tolerance)).filter( tangentInBounds(_, ignoreBounds, tolerance) )

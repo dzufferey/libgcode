@@ -61,9 +61,9 @@ package object utils {
   }
 
   /* returns (n,s) where n the largest integer with "start + n×s = stop" and "s ≤ maxStep" */
-  def evenSteps(start: Double, stop: Double, maxStep: Double) = {
+  def evenSteps(start: Double, stop: Double, maxStep: Double, tolerance: Double) = {
     val delta = stop - start
-    val nSteps = math.ceil(delta.abs /  maxStep).toInt
+    val nSteps = math.ceil((delta.abs - tolerance) /  maxStep).toInt
     val stepSize = delta / nSteps
     (nSteps, stepSize)
   }

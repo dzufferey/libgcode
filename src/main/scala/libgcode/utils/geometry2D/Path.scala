@@ -8,7 +8,7 @@ import scala.math
 //TODO param to make the param depend on the length
 class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
 
-  assert(isConntected(1e-6), s"not connected $children") //TODO
+  assert(isConntected(), s"not connected $children") //TODO
 
   protected def expand(u: Double): (Int, Double) = {
     assert(u >= 0 && u <= 1)
@@ -147,32 +147,63 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
     ???
   }
 
+  protected def connectingArc(center: (Double, Double), startsAfter: AbsCurve, stopsBefore: AbsCurve) = {
+    val (startA, startB) = startsAfter(1)
+    val (centerA, centerB) = center
+    val (endA, endB) = stopsBefore(0)
+    Arc(startA, startB, centerA, centerB, endA, endB)
+  }
+
+  protected def connectSegments(c: (Double, Double), c1: AbsCurve, c2: AbsCurve, tolerance: Double = 1e-6): Seq[AbsCurve] = {
+    val intersections = c1.intersect(c2, tolerance = tolerance)
+    intersections.size match {
+      case 0 =>
+        // connects the two path with an arc
+        Seq(c1, connectingArc(c, c1, c2), c2)
+      case 1 =>
+        // restrict the two paths to meet at the intersection
+        val (a, b) = intersections.head
+        val u = c1.get(a, b, tolerance = tolerance).get
+        val l = c2.get(a, b, tolerance = tolerance).get
+        Seq(c1.restrict(0, u), c2.restrict(l, 1))
+      case _ =>
+        sys.error("offset does not yet handle multiple intersection")
+    }
+  }
+
   // Could use https://github.com/jbuckmccready/CavalierContours for reference
-  // should return a Seq[Path]
-  def offset(x: Double): Path = {
-    val tolerance: Double = 1e-6 //TODO
+  // TODO in some cases, it could return more than one path (think of an height)
+  def offset(x: Double, tolerance: Double = 1e-6): Path = {
     // the offset may result in degenerate curves
     val stack = scala.collection.mutable.Stack[AbsCurve]()
-    var lastOffsetFailed = false
-    for (c <- children) {
-      try {
-        val c2 = c.offset(x)
-        //TODO see if it connects to the previous
-        // - if no intersection potentially insert an arc to connect
-        // - need to check for intersection and restrict/split if needed
-        //   there can be multiple intersections ...
-        val previous = stack.pop()
-        ???
-        lastOffsetFailed = false // connection may be hard when some segement disappeared
-      } catch {
-        case _: Throwable =>
-          lastOffsetFailed = true
-      }
+    stack.push(children.head.offset(x))
+    for (c <- children.tail) {
+      val c2 = c.offset(x) //this may fails if it is circle that become a negative radius
+      val previous = stack.pop()
+      stack.pushAll(connectSegments(c(0), previous, c2, tolerance))
     }
-    val p = new Path(stack.toIndexedSeq)
+    val revSeq = if (isClosed(tolerance)) {
+        val center = children.head(0)
+        val start = stack.pop()
+        val end = stack.last
+        val result = connectSegments(center, start, end, tolerance)
+        result.size match {
+          case 2 =>
+            stack.push(result(0))
+            stack.toIndexedSeq.dropRight(1) :+ result(1)
+          case 3 =>
+            stack.push(result(0))
+            stack.push(result(1))
+            stack.toIndexedSeq
+          case _ =>
+            sys.error("connection should result in 2 or 3 segments")
+        }
+      } else {
+        stack.toIndexedSeq
+      }
+    val p = new Path(revSeq.reverse)
     assert(!isClosed(tolerance) || p.isClosed(tolerance)) // small sanity check
     p
-    // then we should postprocess and remove self-intersection introduced by the offset
   }
 
   def toGCode(config: Config): Seq[Command] = {

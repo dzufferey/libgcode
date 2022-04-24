@@ -26,7 +26,7 @@ object Rectangle {
     //TODO currently ignores the finishing pass!
     assert(conf.workingPlane == Plane.XY, "Currently only for XY working plane") //FIXME makes the assertion works for the other planes
     val cmds = ArrayBuffer.empty[Command]
-    val (nTurn, effectiveDoC) = evenSteps(z, z - depth, conf.depthOfCut)
+    val (nTurn, effectiveDoC) = evenSteps(z, z - depth, conf.depthOfCut, conf.roundingError)
     for (i <- 0 until nTurn) {
         layer(x, y, z + i * effectiveDoC,
               width, length, effectiveDoC.abs,

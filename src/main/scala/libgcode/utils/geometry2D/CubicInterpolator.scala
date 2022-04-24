@@ -70,7 +70,7 @@ class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
   // "An offset spline approximation for plane cubic splines" by Reinhold Klass, 1983
   // FIXME: instead we could compute the expected position/direction for a finite number of samples then use least square to minimize the error
   // TODO check https://raphlinus.github.io/curves/2021/03/11/bezier-fitting.html for a better solution
-  def offset(x: Double) = {
+  def offset(x: Double, tolerance: Double = 1e-6) = {
     def at(u: Double) = {
       val (a, b) = apply(u)
       val (na, nb) = normal(u)

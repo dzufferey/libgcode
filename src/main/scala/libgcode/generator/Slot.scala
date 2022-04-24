@@ -12,7 +12,7 @@ object Slot {
             radius: Double,
             buffer: ArrayBuffer[Command],
             conf: Config) = {
-    val (nWidth,stepWidth) = evenSteps(0, radius - conf.endmillRadius, conf.widthOfCut)
+    val (nWidth,stepWidth) = evenSteps(0, radius - conf.endmillRadius, conf.widthOfCut, conf.roundingError)
     val (da,db) = centerLine.direction(0)
     val angle = math.atan2(db,da)
     val i = -math.sin(angle)
@@ -57,7 +57,7 @@ object Slot {
     assert(radius >= conf.endmillRadius + conf.finishingPass, "slot is too narrow")
     val buffer = ArrayBuffer.empty[Command]
     val centerLine = Line(a1, b1, a2, b2)
-    val (nDepth,stepDepth) = evenSteps(0, depth - conf.finishingPass, conf.depthOfCut)
+    val (nDepth,stepDepth) = evenSteps(0, depth - conf.finishingPass, conf.depthOfCut, conf.roundingError)
     for (i <- 1 to nDepth) {
       val currentDepth = i*stepDepth
       //line in the middle then wider until the outside, and finishing pass at the end

@@ -55,7 +55,7 @@ trait AbsCurve {
     translate(a - a0, b - b0)
   }
 
-  def offset(x: Double): AbsCurve
+  def offset(x: Double, tolerance: Double = 1e-6): AbsCurve
 
   def translate(a: Double, b: Double): AbsCurve
 
@@ -82,7 +82,7 @@ trait AbsCurve {
 
 trait Curve[A <: Curve[A]] extends AbsCurve {
 
-  def offset(x: Double): A
+  def offset(x: Double, tolerance: Double = 1e-6): A
 
   def translate(a: Double, b: Double): A 
 
