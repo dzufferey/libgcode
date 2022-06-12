@@ -20,6 +20,48 @@ class ArcTest extends AnyFunSuite {
     assert(a.curvature(0) == 1.0)
   }
 
+  test("arc 02") {
+    assert(Arc( 1,  0, 0, 0, -1,  0).length <= math.Pi)
+    assert(Arc(-1,  0, 0, 0,  1,  0).length <= math.Pi)
+    assert(Arc( 1,  0, 0, 0,  0,  1).length <= math.Pi)
+    assert(Arc( 1,  0, 0, 0,  0, -1).length <= math.Pi)
+    assert(Arc(-1,  0, 0, 0,  0,  1).length <= math.Pi)
+    assert(Arc(-1,  0, 0, 0,  0, -1).length <= math.Pi)
+    assert(Arc( 0,  1, 0, 0,  0, -1).length <= math.Pi)
+    assert(Arc( 0,  1, 0, 0,  1,  0).length <= math.Pi)
+    assert(Arc( 0, -1, 0, 0,  1,  0).length <= math.Pi)
+    assert(Arc( 0,  1, 0, 0, -1,  0).length <= math.Pi)
+    assert(Arc( 0, -1, 0, 0, -1,  0).length <= math.Pi)
+
+    assert(Arc( 1,  1, 0, 0, -1,  1).length <= math.Pi * math.sqrt(2))
+    assert(Arc( 1,  1, 0, 0,  1, -1).length <= math.Pi * math.sqrt(2))
+    assert(Arc( 1,  1, 0, 0, -1, -1).length <= math.Pi * math.sqrt(2))
+
+    assert(Arc( 1, -1, 0, 0,  1,  1).length <= math.Pi * math.sqrt(2))
+    assert(Arc( 1, -1, 0, 0, -1,  1).length <= math.Pi * math.sqrt(2))
+    assert(Arc( 1, -1, 0, 0, -1, -1).length <= math.Pi * math.sqrt(2))
+
+    assert(Arc(-1,  1, 0, 0,  1,  1).length <= math.Pi * math.sqrt(2))
+    assert(Arc(-1,  1, 0, 0,  1, -1).length <= math.Pi * math.sqrt(2))
+    assert(Arc(-1,  1, 0, 0, -1, -1).length <= math.Pi * math.sqrt(2))
+
+    assert(Arc(-1, -1, 0, 0,  1,  1).length <= math.Pi * math.sqrt(2))
+    assert(Arc(-1, -1, 0, 0, -1,  1).length <= math.Pi * math.sqrt(2))
+    assert(Arc(-1, -1, 0, 0,  1, -1).length <= math.Pi * math.sqrt(2))
+
+    assert(Arc( 1,  1, 0, 0, -1,  1).ccw)
+    assert(Arc( 1,  1, 0, 0,  1, -1).cw)
+
+    assert(Arc( 1, -1, 0, 0,  1,  1).ccw)
+    assert(Arc( 1, -1, 0, 0, -1, -1).cw)
+
+    assert(Arc(-1,  1, 0, 0,  1,  1).cw)
+    assert(Arc(-1,  1, 0, 0, -1, -1).ccw)
+
+    assert(Arc(-1, -1, 0, 0, -1,  1).cw)
+    assert(Arc(-1, -1, 0, 0,  1, -1).ccw)
+  }
+
   test("arc get") {
     val a = Arc(0, 0, 1, 0, 2*math.Pi)
     assert(a.get( 0.7071067811865475, 0.7071067811865475).isDefined)

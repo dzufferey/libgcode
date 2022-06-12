@@ -85,7 +85,7 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
 
   def ccw = alpha <= beta
 
-  def cw = beta <= alpha
+  def cw = !ccw
 
   /** Returns the tangents between the given point and the arc.
    *  The method first computes the tangents to the two circle and
@@ -310,7 +310,7 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     val (a0,b0) = apply(0.0)
     val (a1,b1) = apply(1.0)
     val dir = if (cw) 2 else 3
-    Seq(G(dir, config.x(a1), config.y(b1), config.i(a0 - a), config.j(b0 - b)))
+    Seq(G(dir, config.x(a1), config.y(b1), config.i(a - a0), config.j(b - b0)))
   }
 
 }
@@ -321,13 +321,27 @@ object Arc {
     new Arc(a, b, r, alpha, beta)
   }
 
-  def apply(a0: Double, b0: Double, ca: Double, cb: Double, a1: Double, b1: Double) = {
+  def apply(a0: Double, b0: Double, // start point
+            ca: Double, cb: Double, // center point
+            a1: Double, b1: Double  // end point
+           ) = {
     val r0 = math.hypot(a0 - ca, b0 - cb)
     val r1 = math.hypot(a1 - ca, b1 - cb)
     assert((r0 - r1). abs < 1e-5)
     val alpha = math.atan2(b0 - cb, a0 - ca)
     val beta = math.atan2(b1 - cb, a1 - ca)
-    new Arc(ca, cb, r0, alpha, beta)
+    // There are two arcs which fits these points.
+    // We want to return the shortest one.
+    // The range of atan2 is [-pi, pi].
+    if ((beta - alpha).abs <= math.Pi) {
+      new Arc(ca, cb, r0, alpha, beta)
+    } else {
+      if (alpha <= beta) {
+        new Arc(ca, cb, r0, alpha + 2 * math.Pi, beta)
+      } else {
+        new Arc(ca, cb, r0, alpha, beta + 2 * math.Pi)
+      }
+    }
   }
 
 }
