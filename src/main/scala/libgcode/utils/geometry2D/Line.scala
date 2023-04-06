@@ -82,6 +82,12 @@ class Line( a1: Double, b1: Double, // start
     new Line(a1 + a, b1 + b, a2 + a, b2 + b)
   }
 
+  def rotate(a: Double, b: Double, alpha: Double) = {
+    val (a3, b3) = rotateAround(a, b, alpha, a1, b1)
+    val (a4, b4) = rotateAround(a, b, alpha, a2, b2)
+    new Line(a3, b3, a4, b4)
+  }
+
   def flip = {
     new Line(a2, b2, a1, b1)
   }

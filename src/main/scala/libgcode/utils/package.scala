@@ -13,6 +13,13 @@ package object utils {
     var x = x0
     var curr = f(x)
     var old = curr
+    // FIXME scala 3
+    // while
+    //   old = curr
+    //   x = x - curr/fp(x)
+    //   curr = f(x)
+    //   curr.abs < tolerance && (curr - old).abs > progress && curr.abs < old.abs
+    // do ()
     do {
       old = curr
       x = x - curr/fp(x)
@@ -148,6 +155,26 @@ package object utils {
       // convert back
       depressedRoots.map( t => t - b / (3*a) )
     }
+  }
+
+  /**
+   * Rotate {@code (a,b)} by {@code alpha} around the center of rotation {@code (ca, cb)}.
+   *
+   * @param ca
+   * @param cb
+   * @param alpha
+   * @param a
+   * @param b
+   * @return the new point
+   */
+  def rotateAround(ca: Double, cb: Double, alpha: Double, a: Double, b: Double): (Double, Double) = {
+    val a1 = a - ca
+    val b1 = b - cb
+    val a2 = math.cos(alpha) * a1 - math.sin(alpha) * b1
+    val b2 = math.sin(alpha) * a1 + math.cos(alpha) * b1
+    val a3 = a2 + ca
+    val b3 = b2 + cb
+    (a3, b3)
   }
 
 }

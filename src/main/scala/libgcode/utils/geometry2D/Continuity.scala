@@ -11,7 +11,7 @@ object Continuity extends Enumeration {
    * - C2: C1 + same centerOfCurvature
    */
   val C0, G1, C1, G2, C2 = Value
-  
+
   def level(c: Continuity): Int = c match {
     case C0 => 0
     case C1 | G1 => 1
@@ -34,7 +34,7 @@ object Continuity extends Enumeration {
       if (pc) C2 else G2
     }
   }
-  
+
   def max(c1: Continuity, c2: Continuity): Continuity = {
     val lvl = math.max(level(c1), level(c2))
     val pc = parametricContinuity(c1) || parametricContinuity(c2)

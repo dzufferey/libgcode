@@ -8,6 +8,8 @@ target/
 lib_managed/
 src_managed/
 project/
+.bloop/
+.metals/
 
 # jupyter stuff
 .ipynb_checkpoints
