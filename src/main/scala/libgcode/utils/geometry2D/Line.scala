@@ -133,7 +133,7 @@ class Line( a1: Double, b1: Double, // start
     val num = u * a1 + v * b1 + w
     val denom = u * da + v * db
     if (compare(denom, 0.0, tolerance) == 0) {
-      if (compare(denom, 0.0, tolerance) == 0) {
+      if (compare(num, 0.0, tolerance) == 0) {
         // colinear!
         if (ignoreBounds) {
           Some(a1, b1)

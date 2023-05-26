@@ -238,7 +238,7 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
     // 3. find all self-intersections and, if applicable, the negative offset line
     val intersections = p.selfIntersections(tolerance) ++ p2.map( p.intersect(_, tolerance = tolerance) ).getOrElse(Seq())
     if (intersections.isEmpty) {
-      return p
+      return Seq(p)
     }
     // 4. cut into segments starting and finishing at the intersections
     // starting from the 1st child of a closed path, we may be in the middle of one of the segments
@@ -292,25 +292,34 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
     // starts and ends are an implicit adjacency matrix
     val starts = goodSegments.groupBy(findStart)
     val ends = goodSegments.groupBy(findEnd)
-    // dome marks the edges that have arleady benn processed
+    // done marks the edges that have arleady been processed
     val done = scala.collection.mutable.Set[AbsCurve]()
-    def findLoop(start: (Double, Double)): Seq[AbsCurve] = {
-      ???
+    val completed = scala.collection.mutable.Buffer[Path]()
+    def findLoop(start: (Double, Double), acc: Seq[AbsCurve], next: AbsCurve): Unit = {
+      val end = findEnd(next)
+      val nextCanditates = starts(end).filter( s => !done(s) )
+      if (start == end || nextCanditates.isEmpty) {
+        val s = acc :+ next
+        completed.append(Path(s))
+        s.foreach( done.add(_) )
+      } else if (nextCanditates.size > 1) {
+        // TODO handle the more general case
+        sys.error("more than one candidate")
+      } else if (nextCanditates.size == 1) {
+        findLoop(start, acc :+ next, nextCanditates.head)
+      }
     }
-    // TODO traverse with a stack and a set of points along the path
-    // invariant is that the segments are connected
-    // TODO build a directed labelled graph with intersecions and segments ?
-    // tarjan's algo
-    // bridges of Koenigsberg
-    // - at most two nodes with an odd number of edges (start and end)
-    // - all other nodes with 
-    // corner cases:
-    // - pan-handle paths
-    // - paths with self-intersections but no crossing (generalization of pan-handle)
+    // call until all the segments have been covered
+    for ( s <- goodSegments ) {
+      if (!done(s)) {
+        findLoop(findStart(s), Seq(), s)
+      }
+    }
+    // TODO
     // 7. sanity checks
     // assert(!isClosed(tolerance) || res.forall(_.isClosed(tolerance)))
     // not closed mean at most 2 unclosed path in res
-    ???
+    completed.toSeq
   }
 
   def offset(x: Double, tolerance: Double = 1e-6): Path = {
