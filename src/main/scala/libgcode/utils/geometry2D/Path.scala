@@ -5,10 +5,10 @@ import libgcode.generator.Config
 import libgcode.Command
 import scala.math
 
-//TODO param to make the param depend on the length
 class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
 
-  assert(isConntected(), s"not connected $children") //TODO
+  assert(isConntected(), s"Path is not connected: $children")
+  assert(children.forall( c => !c.isInstanceOf[Path]), "Path should be flattened. Use the companion object to construct a Path.")
 
   protected def expand(u: Double): (Int, Double) = {
     assert(u >= 0 && u <= 1)
@@ -34,9 +34,13 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
   def get(a: Double, b: Double,
           ignoreBounds: Boolean = false,
           tolerance: Double = 1e-6): Option[Double] = {
-    for (i <- 0 until children.size;
-         u <- children(i).get(a,b,ignoreBounds,tolerance)) {
-      return Some(compress(i, u))
+    var i = 0
+    while (i < children.size) {
+      children(i).get(a,b,ignoreBounds,tolerance) match {
+        case Some(u) => 
+          return Some(compress(i, u))
+        case None => ()
+      }
     }
     return None
   }
@@ -59,6 +63,11 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
 
   def translate(a: Double, b: Double): Path = {
     val c2 = children.map( c => c.translate(a, b) )
+    new Path(c2)
+  }
+
+  def rotate(a: Double, b: Double, alpha: Double) = {
+    val c2 = children.map( c => c.rotate(a, b, alpha) )
     new Path(c2)
   }
 
@@ -93,7 +102,6 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
   }
 
   override def continuity(tolerance: Double = 1e-6): Continuity.Continuity = {
-    //TODO child could be a Path ...
     val upper = children.size + (if (isClosed(tolerance)) 0 else -1)
     var g1 = true
     var c1 = true
@@ -133,7 +141,6 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
     } else if (g1) {
       if (sameRoC) Continuity.G2 else Continuity.G1
     } else {
-      // assert isConntected => C0
       Continuity.C0
     }
   }
@@ -142,9 +149,25 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
     compare(apply(0), apply(1), tolerance)
   }
 
-  def selfIntersections(tolerance: Double = 1e-6): Int = {
-    //careful as cubic curves can intersect with themselves ?!
-    ???
+  protected def selfIntersections(tolerance: Double = 1e-6): Seq[(Double, Double)] = {
+    // intersect all pairs and filter out intersections of neighbouring segments at their connecting ends
+    var intersecions = Seq[(Double,Double)]()
+    val n = children.length
+    for (i <- 0 until n) {
+      val ci = children(i)
+      // FIXME cubic curves can intersect with themselves !
+      for (j <- i+1 until n) {
+        val cj = children(j)
+        var inter = ci.intersect(cj, tolerance = tolerance)
+        if (i == 0 && j == n-1 && isClosed(tolerance)) {
+          inter = inter.filterNot( point => compare(point, ci(0.0), tolerance) )
+        } else if (j == i+1) {
+          inter = inter.filterNot( point => compare(point, ci(1.0), tolerance) )
+        }
+        intersecions ++= inter
+      }
+    }
+    intersecions
   }
 
   protected def connectingArc(center: (Double, Double), startsAfter: AbsCurve, stopsBefore: AbsCurve) = {
@@ -171,10 +194,9 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
     }
   }
 
-  // Could use https://github.com/jbuckmccready/CavalierContours for reference
-  // TODO in some cases, it could return more than one path (think of an height)
-  def offset(x: Double, tolerance: Double = 1e-6): Path = {
+  protected def pureOffset(x: Double, tolerance: Double = 1e-6): Path = {
     // the offset may result in degenerate curves
+    // TODO if the path is open, should we add arc at the beginning and the end ?
     val stack = scala.collection.mutable.Stack[AbsCurve]()
     stack.push(children.head.offset(x))
     for (c <- children.tail) {
@@ -201,9 +223,116 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
       } else {
         stack.toIndexedSeq
       }
-    val p = new Path(revSeq.reverse)
-    assert(!isClosed(tolerance) || p.isClosed(tolerance)) // small sanity check
-    p
+    new Path(revSeq.reverse)
+  }
+
+  // Reference: https://github.com/jbuckmccready/CavalierContours and https://github.com/jbuckmccready/cavalier_contours
+  // 1. create the offset of all the children and stich them together (joining curves)
+  // 2. if the path is open, do the same with -x as offset
+  // 3. find all self-intersections and, if applicable, intersections with the negative offset curve
+  // 4. cut into segments starting and finishing at the intersections
+  // 5. discard the intersections that are closer than the offsets
+  // 6. close the loops including the final one if the path was originially closed
+  def offsetAll(x: Double, tolerance: Double = 1e-6): Seq[Path] = {
+    // 1. create the offset of all the children and stich them together (joining curves)
+    val p = pureOffset(x, tolerance)
+    // 2. if the path is open, do the same with -x as offset
+    val closed = p.isClosed(tolerance)
+    val p2 = if (!closed) Some(pureOffset(-x, tolerance)) else None
+    // 3. find all self-intersections and, if applicable, the negative offset line
+    val intersections = p.selfIntersections(tolerance) ++ p2.map( p.intersect(_, tolerance = tolerance) ).getOrElse(Seq())
+    if (intersections.isEmpty) {
+      return Seq(p)
+    }
+    // 4. cut into segments starting and finishing at the intersections
+    // starting from the 1st child of a closed path, we may be in the middle of one of the segments
+    // need to be careful if an intersection happens precisely at the start/end points
+    val segments = scala.collection.mutable.Buffer[AbsCurve]()
+    var currentSegment: Option[AbsCurve] = None
+    for (c <- p.children) {
+      val splitPoints = intersections.flatMap{ case (a,b) => c.get(a, b, tolerance = tolerance) }.sorted
+      val lb = splitPoints.foldLeft(0.0)( (lb, ub) => {
+        assert(lb <= ub)
+        if (ub < tolerance) {
+          if (currentSegment.isDefined) {
+            segments += currentSegment.get
+            currentSegment = None
+          }
+          lb
+        } else {
+          val c2 = c.restrict(lb, ub)
+          segments += currentSegment.map( _.append(c2, tolerance) ).getOrElse(c2)
+          currentSegment = None
+          ub
+        }
+      })
+      if (lb < 1.0 - tolerance) {
+        val c2 = c.restrict(lb, 1.0)
+        currentSegment = currentSegment.map( _.append(c2, tolerance) ).orElse(Some(c2))
+      }
+    }
+    if (currentSegment.isDefined) {
+      val cs = currentSegment.get
+      val end = cs(1.0)
+      if (closed &&
+          intersections.forall( i => !compare(i, end, tolerance) ) &&
+          segments.size > 0) {
+        segments(0) = cs.append(segments(0))
+      } else {
+        segments += cs
+      }
+    }
+    // 5. discard the intersections that are closer than the offsets
+    val goodSegments = segments.toSeq.filter( approximateDistance(_) <= x - tolerance )
+    // 6. close the loops including the final one if the path was originially closed
+    def findClosestIntersection(c : AbsCurve, u: Double): (Double, Double) = {
+      intersections.minBy{ case (ia, ib) => 
+        val (ca, cb) = c(u)
+        distance(ia, ib, ca, cb)
+      }
+    }
+    def findStart(c: AbsCurve) = findClosestIntersection(c, 0.0)
+    def findEnd(c: AbsCurve) = findClosestIntersection(c, 1.0)
+    // starts and ends are an implicit adjacency matrix
+    val starts = goodSegments.groupBy(findStart)
+    val ends = goodSegments.groupBy(findEnd)
+    // done marks the edges that have arleady been processed
+    val done = scala.collection.mutable.Set[AbsCurve]()
+    val completed = scala.collection.mutable.Buffer[Path]()
+    def findLoop(start: (Double, Double), acc: Seq[AbsCurve], next: AbsCurve): Unit = {
+      val end = findEnd(next)
+      val nextCanditates = starts(end).filter( s => !done(s) )
+      if (start == end || nextCanditates.isEmpty) {
+        val s = acc :+ next
+        completed.append(Path(s))
+        s.foreach( done.add(_) )
+      } else if (nextCanditates.size > 1) {
+        // TODO handle the more general case
+        sys.error("more than one candidate")
+      } else if (nextCanditates.size == 1) {
+        findLoop(start, acc :+ next, nextCanditates.head)
+      }
+    }
+    // call until all the segments have been covered
+    for ( s <- goodSegments ) {
+      if (!done(s)) {
+        findLoop(findStart(s), Seq(), s)
+      }
+    }
+    // TODO
+    // 7. sanity checks
+    // assert(!isClosed(tolerance) || res.forall(_.isClosed(tolerance)))
+    // not closed mean at most 2 unclosed path in res
+    completed.toSeq
+  }
+
+  def offset(x: Double, tolerance: Double = 1e-6): Path = {
+    val ps = offsetAll(x, tolerance)
+    if (ps.size > 1) {
+      sys.error("offset is composed of multiple paths!")
+    } else {
+      ps.head
+    }
   }
 
   def toGCode(config: Config): Seq[Command] = {
@@ -216,6 +345,24 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
 
 object Path {
 
-  def apply(children: IndexedSeq[AbsCurve]) = new Path(children)
+  def apply(children: Iterable[AbsCurve]): Path = {
+    if (children.size == 0) {
+      sys.error("empty path")
+    } else if (children.size == 1 && children.head.isInstanceOf[Path]) {
+      children.head.asInstanceOf[Path]
+    } else if (children.isInstanceOf[IndexedSeq[AbsCurve]] && children.forall( c => !c.isInstanceOf[Path] ) ){
+      new Path(children.asInstanceOf[IndexedSeq[AbsCurve]])
+    } else {
+      val buffer = IndexedSeq.newBuilder[AbsCurve]
+      for ( c <- children ) {
+        if (c.isInstanceOf[Path]) {
+          buffer ++= c.asInstanceOf[Path].children
+        } else {
+          buffer += c
+        }
+      }
+      new Path(buffer.result())
+    }
+  } 
 
 }

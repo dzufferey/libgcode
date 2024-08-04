@@ -39,5 +39,7 @@ class PathTest extends AnyFunSuite {
     assert(largeCube.children.size == 8)
   }
 
+  // FIXME more tests
+
 
 }

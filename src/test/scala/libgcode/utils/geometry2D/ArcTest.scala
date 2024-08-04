@@ -2,6 +2,7 @@ package libgcode.utils.geometry2D
 
 import org.scalatest.funsuite.AnyFunSuite
 import scala.math
+import libgcode.utils._
 
 class ArcTest extends AnyFunSuite {
 
@@ -121,6 +122,35 @@ class ArcTest extends AnyFunSuite {
     assert(a6.intersectArc(a0) == Seq((-0.6614378277661477,0.75),(0.6614378277661477,0.75)))
     assert(a0.intersectArc(a7) == Seq((0.4841229182759271,0.875),(-0.4841229182759271,0.875)))
     assert(a7.intersectArc(a0) == Seq((0.4841229182759271,0.875),(-0.4841229182759271,0.875)))
+  }
+
+  test("arc rotate") {
+    val a0 = Arc(0, 0, 1, 0, 2*math.Pi)
+    val a1 = Arc(0, 0, 1, 0, math.Pi/2)
+    val a2 = a0.rotate(0, 0, math.Pi)
+    val a3 = a1.rotate(0, 0, math.Pi)
+    val a4 = a0.rotate(1, 1, math.Pi)
+    val a5 = a1.rotate(1, 1, math.Pi)
+    assert(compare(a2.a, 0.0, 1e-6) == 0)
+    assert(compare(a2.b, 0.0, 1e-6) == 0)
+    assert(compare(a3.a, 0.0, 1e-6) == 0)
+    assert(compare(a3.b, 0.0, 1e-6) == 0)
+    assert(compare(a4.a, 2.0, 1e-6) == 0)
+    assert(compare(a4.b, 2.0, 1e-6) == 0)
+    assert(compare(a5.a, 2.0, 1e-6) == 0)
+    assert(compare(a5.b, 2.0, 1e-6) == 0)
+    assert(a2.radius == 1.0)
+    assert(a3.radius == 1.0)
+    assert(a4.radius == 1.0)
+    assert(a5.radius == 1.0)
+    assert(a2.alpha == math.Pi)
+    assert(a3.alpha == math.Pi)
+    assert(a4.alpha == math.Pi)
+    assert(a5.alpha == math.Pi)
+    assert(a2.beta == 3*math.Pi)
+    assert(a3.beta == 3*math.Pi/2)
+    assert(a4.beta == 3*math.Pi)
+    assert(a5.beta == 3*math.Pi/2)
   }
 
 }

@@ -6,11 +6,14 @@ import libgcode.Command
 import libgcode.extractor._
 import scala.math
 
-/** parameters
- * - (a, b): center of rotation
- * - r: radius
- * - alpha: start angle
- * - beta: end angle
+/**
+ * An arc (part of a circle)
+ *
+ * @param a  1st coordinate of the center
+ * @param b  2nd coordinate of the center
+ * @param r  radius
+ * @param alpha  start angle
+ * @param beta   end angle
  */
 class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val beta: Double) extends Curve[Arc] {
 
@@ -71,6 +74,13 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
 
   def translate(ta: Double, tb: Double) = {
     new Arc(a+ta, b+tb, r, alpha, beta)
+  }
+
+  def rotate(a: Double, b: Double, alpha: Double) = {
+    val newAlpha = (this.alpha + alpha) % (2 * math.Pi)
+    val newBeta = newAlpha + (beta - this.alpha)
+    val (a1, b1) = rotateAround(a, b, alpha, this.a, this.b)
+    new Arc(a1, b1, r, newAlpha, newBeta)
   }
 
   def flip = {

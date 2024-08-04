@@ -10,16 +10,17 @@ package object utils {
              x0: Double,
              progress: Double = 1e-10,
              tolerance: Double = 1e-10) = {
-    var x = x0
+    // do an iteration so the while loop condition makes sense
+    var old = f(x0)
+    var x = x0 - f(x0)/fp(x0)
     var curr = f(x)
-    var old = curr
-    do {
+    while (curr.abs < tolerance &&
+           (curr - old).abs > progress &&
+           curr.abs < old.abs) {
       old = curr
       x = x - curr/fp(x)
       curr = f(x)
-    } while (curr.abs < tolerance &&
-             (curr - old).abs > progress &&
-             curr.abs < old.abs)
+    }
     if (curr.abs < tolerance) {
       Some(x)
     } else {
@@ -148,6 +149,26 @@ package object utils {
       // convert back
       depressedRoots.map( t => t - b / (3*a) )
     }
+  }
+
+  /**
+   * Rotate {@code (a,b)} by {@code alpha} around the center of rotation {@code (ca, cb)}.
+   *
+   * @param ca
+   * @param cb
+   * @param alpha
+   * @param a
+   * @param b
+   * @return the new point
+   */
+  def rotateAround(ca: Double, cb: Double, alpha: Double, a: Double, b: Double): (Double, Double) = {
+    val a1 = a - ca
+    val b1 = b - cb
+    val a2 = math.cos(alpha) * a1 - math.sin(alpha) * b1
+    val b2 = math.sin(alpha) * a1 + math.cos(alpha) * b1
+    val a3 = a2 + ca
+    val b3 = b2 + cb
+    (a3, b3)
   }
 
 }

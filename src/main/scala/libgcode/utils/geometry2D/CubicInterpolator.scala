@@ -96,6 +96,18 @@ class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double,
     CubicInterpolator(a1 + ta, b1 + tb, da1, db1, a2 + ta, b2 + tb, da2, db2)
   }
 
+  def rotate(a: Double, b: Double, alpha: Double) = {
+    val (a1, b1) = apply(0)
+    val (a2, b2) = apply(1)
+    val (da1, db1) = derivative(0)
+    val (da2, db2) = derivative(1)
+    val (a3, b3) = rotateAround(a, b, alpha, a1, b1)
+    val (a4, b4) = rotateAround(a, b, alpha, a2, b2)
+    val (da3, db3) = rotateAround(0, 0, alpha, da1, db1)
+    val (da4, db4) = rotateAround(0, 0, alpha, da2, db2)
+    CubicInterpolator(a3, b3, da3, db3, a4, b4, da4, db4)
+  }
+
   def flip = {
     val (a1, b1) = apply(0)
     val (a2, b2) = apply(1)
