@@ -90,11 +90,11 @@ class UtilsTest extends AnyFunSuite {
   }
 
   test("rotate around") {
-    assert(compare(rotateAround(0,0,0,0,0), (0,0), 1e-6))
-    assert(compare(rotateAround(0,0,0,0,1), (0,1), 1e-6))
-    assert(compare(rotateAround(0,0,math.Pi,0,1), (0,-1), 1e-6))
-    assert(compare(rotateAround(0,0,math.Pi/2,0,1), (-1,0), 1e-6))
-    assert(compare(rotateAround(0,1,math.Pi/2,0,0), (1,1), 1e-6))
+    assert(compare(rotateAround(0,0,0,0,0), (0.0,0.0), 1e-6))
+    assert(compare(rotateAround(0,0,0,0,1), (0.0,1.0), 1e-6))
+    assert(compare(rotateAround(0,0,math.Pi,0,1), (0.0,-1.0), 1e-6))
+    assert(compare(rotateAround(0,0,math.Pi/2,0,1), (-1.0,0.0), 1e-6))
+    assert(compare(rotateAround(0,1,math.Pi/2,0,0), (1.0,1.0), 1e-6))
   }
 
 }

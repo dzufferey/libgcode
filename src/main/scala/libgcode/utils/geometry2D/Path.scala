@@ -34,9 +34,13 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
   def get(a: Double, b: Double,
           ignoreBounds: Boolean = false,
           tolerance: Double = 1e-6): Option[Double] = {
-    for (i <- 0 until children.size;
-         u <- children(i).get(a,b,ignoreBounds,tolerance)) {
-      return Some(compress(i, u))
+    var i = 0
+    while (i < children.size) {
+      children(i).get(a,b,ignoreBounds,tolerance) match {
+        case Some(u) => 
+          return Some(compress(i, u))
+        case None => ()
+      }
     }
     return None
   }

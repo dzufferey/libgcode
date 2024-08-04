@@ -10,23 +10,17 @@ package object utils {
              x0: Double,
              progress: Double = 1e-10,
              tolerance: Double = 1e-10) = {
-    var x = x0
+    // do an iteration so the while loop condition makes sense
+    var old = f(x0)
+    var x = x0 - f(x0)/fp(x0)
     var curr = f(x)
-    var old = curr
-    // FIXME scala 3
-    // while
-    //   old = curr
-    //   x = x - curr/fp(x)
-    //   curr = f(x)
-    //   curr.abs < tolerance && (curr - old).abs > progress && curr.abs < old.abs
-    // do ()
-    do {
+    while (curr.abs < tolerance &&
+           (curr - old).abs > progress &&
+           curr.abs < old.abs) {
       old = curr
       x = x - curr/fp(x)
       curr = f(x)
-    } while (curr.abs < tolerance &&
-             (curr - old).abs > progress &&
-             curr.abs < old.abs)
+    }
     if (curr.abs < tolerance) {
       Some(x)
     } else {
