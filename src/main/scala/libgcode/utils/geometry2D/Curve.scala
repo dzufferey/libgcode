@@ -128,16 +128,15 @@ trait AbsCurve {
    * @param nSamples number of samples along each curve that are used
    * @return the distance between {@code this} and {@code c}
    */
-  def approximateDistance(c: AbsCurve, nSamples: Int = 10): Double = {
+  def approximateDistance(c: AbsCurve, nSamples: Int = 100): Double = {
     val delta = 1.0 / (nSamples - 1)
-    val points1 = Array.ofDim[(Double,Double)](nSamples)
-    val points2 = Array.ofDim[(Double,Double)](nSamples)
     var distance = Double.PositiveInfinity
-    for (i <- 0 until nSamples;
-         j <- 0 until nSamples) {
-      val (a1, b1) = points1(i)
-      val (a2, b2) = points2(j)
-      distance = scala.math.min(distance, math.hypot(a2 - a1, b2 - b1))
+    for (i <- 0 until nSamples) {
+      val (a1, b1) = apply(i * delta)
+      for (j <- 0 until nSamples) {
+        val (a2, b2) = c.apply(j * delta)
+        distance = scala.math.min(distance, math.hypot(a2 - a1, b2 - b1))
+      }
     }
     return distance
   }

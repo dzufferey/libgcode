@@ -118,6 +118,7 @@ class Line( a1: Double, b1: Double, // start
   }
 
   def restrict(_lb: Double, _ub: Double): Line = {
+    assert(_lb < _ub)
     val la =  linearInterpolation(a1, a2, _lb)
     val lb =  linearInterpolation(b1, b2, _lb)
     val ua =  linearInterpolation(a1, a2, _ub)

@@ -291,8 +291,8 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
       val (na,nb) = l2.normal(1)
       val l3 = Line(ma,mb,ma+na,mb+nb)
       val i0 = intersectLine(l3, true, tolerance)
+      assert(i0.length == 2, s"expecting 2 points: ${i0.mkString(", ")}")
       val i = i0.filter(inBounds)
-      assert(i.length == 2)
       i
     } else {
       // no intersection

@@ -39,6 +39,16 @@ class PathTest extends AnyFunSuite {
     assert(largeCube.children.size == 8)
   }
 
+  test("path offset 02") {
+    val degenerateCube = cube.offsetAll(0.5)
+    assert(degenerateCube.size == 0)
+  }
+
+  test("path offset 03") {
+    val degenerateCube = cube.offsetAll(0.6)
+    assert(degenerateCube.size == 0)
+  }
+
   // FIXME more tests
 
 
