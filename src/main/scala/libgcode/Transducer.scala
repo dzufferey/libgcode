@@ -1,8 +1,8 @@
 package libgcode
 
-import java.io._
-import fastparse._
-import SingleLineWhitespace._
+import java.io.*
+import fastparse.*
+import SingleLineWhitespace.*
 
 trait Transducer {
 
@@ -14,20 +14,24 @@ trait Transducer {
 
   /** read a command and produce a (possibly empty) sequence of commands */
   protected def transform(cmd: Command): Seq[Command]
-  
+
   def transduce(cmds: Seq[Command]): Seq[Command] = {
     init ++ cmds.flatMap(transform) ++ finish
   }
 
-  def transduce(input: BufferedReader, output: BufferedWriter, mkPrinter: BufferedWriter => Printer = b => new DefaultPrinter(b) ) = {
-    var read = 0
+  def transduce(
+      input: BufferedReader,
+      output: BufferedWriter,
+      mkPrinter: BufferedWriter => Printer = b => new DefaultPrinter(b)
+  ) = {
+    var read    = 0
     var written = 0
     val printer = mkPrinter(output)
-    val header = init
+    val header  = init
     written += header.length
     printer.header
     printer(header)
-    while(input.ready()) {
+    while (input.ready()) {
       val line = input.readLine.trim
       read += 1
       var cmd: Command = null

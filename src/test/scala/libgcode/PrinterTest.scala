@@ -1,7 +1,7 @@
 package libgcode
 
 import org.scalatest.funsuite.AnyFunSuite
-import libgcode.extractor._
+import libgcode.extractor.*
 
 class PrinterTest extends AnyFunSuite {
 

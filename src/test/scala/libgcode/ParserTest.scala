@@ -2,7 +2,7 @@ package libgcode
 
 import org.scalatest.funsuite.AnyFunSuite
 import dzufferey.utils.IO
-import fastparse._
+import fastparse.*
 
 class ParserTest extends AnyFunSuite {
 
@@ -11,14 +11,14 @@ class ParserTest extends AnyFunSuite {
   def ok(p: P[_] => P[Any], str: String) = {
     parse(str, p) match {
       case Parsed.Success(v, _) => ()
-      case other => sys.error(other.toString)
+      case other                => sys.error(other.toString)
     }
   }
 
   def check[A](p: P[_] => P[A], str: String, a: A) = {
     parse(str, p) match {
       case Parsed.Success(v, _) => assert(v == a)
-      case other => sys.error(other.toString)
+      case other                => sys.error(other.toString)
     }
   }
 
@@ -40,11 +40,11 @@ class ParserTest extends AnyFunSuite {
   }
 
   def expectedNbrLineLoop(fName: String, n: Int, compareReparsed: Boolean = true) = {
-    val raw = IO.readTextFile(path + fName)
+    val raw      = IO.readTextFile(path + fName)
     val commands = Parser(raw)
     assert(commands.size == n)
     val printed = Printer(commands)
-    //IO.writeInFile("temp.txt", printed)
+    // IO.writeInFile("temp.txt", printed)
     val reparsed = Parser(printed)
     assert(reparsed.size == n)
     if (compareReparsed) {
@@ -54,9 +54,8 @@ class ParserTest extends AnyFunSuite {
     }
   }
 
-
   def expectedNbrLine(fName: String, n: Int) = {
-    val raw = IO.readTextFile(path + fName)
+    val raw      = IO.readTextFile(path + fName)
     val commands = Parser(raw)
     assert(commands.size == n)
   }
@@ -94,7 +93,7 @@ class ParserTest extends AnyFunSuite {
   }
 
   test("slic3r 01") {
-    // TODO not quite sure why the reparsing fails
+    // TODO: not quite sure why the reparsing fails
     // printing on disk and parsing works fine ...
     expectedNbrLine("slic3r01.gco", 215668)
   }

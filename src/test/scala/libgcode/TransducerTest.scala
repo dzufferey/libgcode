@@ -1,11 +1,11 @@
 package libgcode
 
 import org.scalatest.funsuite.AnyFunSuite
-import java.io._
-import java.nio.file._
+import java.io.*
+import java.nio.file.*
 
 class TransducerTest extends AnyFunSuite {
-  
+
   val path = "src/test/resources/"
 
   val files = List(
@@ -24,13 +24,12 @@ class TransducerTest extends AnyFunSuite {
     protected def transform(c: Command) = List(c)
   }
 
-  
   test("ID") {
     val id = new ID
-    files.foreach{ case (fName, nbrLines) =>
-      val file = Paths.get(path, fName)
-      val reader = Files.newBufferedReader(file)
-      val writer = new BufferedWriter(new StringWriter)
+    files.foreach { case (fName, nbrLines) =>
+      val file            = Paths.get(path, fName)
+      val reader          = Files.newBufferedReader(file)
+      val writer          = new BufferedWriter(new StringWriter)
       val (read, written) = id.transduce(reader, writer)
       assert(nbrLines == read)
       assert(nbrLines == written)

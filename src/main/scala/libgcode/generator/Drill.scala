@@ -1,15 +1,14 @@
 package libgcode.generator
 
 import libgcode.Command
-import libgcode.extractor._
+import libgcode.extractor.*
 
 object Drill {
 
   // bottom of the hole is 'height - depth' (assuming XY workingPlane Z is the height)
-  def apply(x: Double, y: Double, z: Double, depth: Double
-           )(implicit conf: Config) = {
-    val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
-    val (a,b,c) = conf.toWorkplane(x,y,z)
+  def apply(x: Double, y: Double, z: Double, depth: Double)(implicit conf: Config) = {
+    val buffer    = scala.collection.mutable.ArrayBuffer.empty[Command]
+    val (a, b, c) = conf.toWorkplane(x, y, z)
     buffer += Empty(F(conf.plungeFeed))
     buffer += G(0, conf.x(a), conf.y(b))
     var currentDepth = 0.0

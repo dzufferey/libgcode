@@ -1,6 +1,6 @@
 package libgcode
 
-import java.text.{DecimalFormat,DecimalFormatSymbols}
+import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.util.Locale
 
 object CmdType extends Enumeration {
@@ -13,15 +13,17 @@ object ParamType extends Enumeration {
   val A, B, C, D, E, F, H, I, J, K, L, P, Q, R, S, T, X, Y, Z = Value
 }
 
-import CmdType._
-import ParamType._
+import CmdType.*
+import ParamType.*
 
 // each line is a command
-case class Command( ctype: CmdType,
-                    code: Seq[Int],             // code X.Y corresponds to Seq(X, Y), ignored for Empty CmdType
-                    parameters: Seq[Param],     // parameters
-                    line: Option[Int],          // line number (optional)
-                    comment: Option[String])  { // trailing comment
+case class Command(
+    ctype: CmdType,
+    code: Seq[Int],         // code X.Y corresponds to Seq(X, Y), ignored for Empty CmdType
+    parameters: Seq[Param], // parameters
+    line: Option[Int],      // line number (optional)
+    comment: Option[String]
+) { // trailing comment
 
   def replaceComment(c: Option[String]) = {
     if (c == comment) this
@@ -36,7 +38,7 @@ case class ParamT(ptype: ParamType) extends Param {
 }
 case class RealParam(ptype: ParamType, value: Double) extends Param {
   assert(RealParam.is(ptype), ptype.toString + " is not a real valued parameter")
-  override def toString = ptype.toString + RealParam.format(value)
+  override def toString           = ptype.toString + RealParam.format(value)
   def format(f: Double => String) = ptype.toString + f(value)
 }
 case class IntParam(ptype: ParamType, value: Int) extends Param {
@@ -45,7 +47,7 @@ case class IntParam(ptype: ParamType, value: Int) extends Param {
 }
 
 object RealParam {
-  val types = Set(A, B, C, D, E, F, H, I, J, K, Q, R, X, Y, Z)
+  val types            = Set(A, B, C, D, E, F, H, I, J, K, Q, R, X, Y, Z)
   def is(t: ParamType) = types(t)
 
   protected val df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH))
@@ -54,6 +56,6 @@ object RealParam {
 }
 
 object IntParam {
-  val types = Set(L, P, S, T)
+  val types            = Set(L, P, S, T)
   def is(t: ParamType) = types(t)
 }

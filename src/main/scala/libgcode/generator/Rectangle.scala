@@ -2,60 +2,72 @@ package libgcode.generator
 
 import libgcode.Command
 import libgcode.abstractmachine.Plane
-import libgcode.extractor._
+import libgcode.extractor.*
 import libgcode.utils.evenSteps
-import scala.math._
+import scala.math.*
 import scala.collection.mutable.{AbstractBuffer, ArrayBuffer}
 
 /** Pocket/Surface a rectangle. */
 object Rectangle {
 
-  /** 
-   * @param x
-   * @param y
-   * @param z
-   * @param width
-   * @param length
-   * @param depth the bottom of the surface is z-depth
-   * @param inside stays within the bound (pocket) or cover the whole surface including the corner (facing)
-   */
-  def apply(x: Double, y: Double, z: Double, // lower left corner
-            width: Double, length: Double, depth: Double,
-            inside: Boolean = true
-           )(implicit conf: Config) = {
-    //TODO currently ignores the finishing pass!
-    assert(conf.workingPlane == Plane.XY, "Currently only for XY working plane") //FIXME makes the assertion works for the other planes
-    val cmds = ArrayBuffer.empty[Command]
+  /** @param x
+    * @param y
+    * @param z
+    * @param width
+    * @param length
+    * @param depth
+    *   the bottom of the surface is z-depth
+    * @param inside
+    *   stays within the bound (pocket) or cover the whole surface including the corner (facing)
+    */
+  def apply(
+      x: Double,
+      y: Double,
+      z: Double, // lower left corner
+      width: Double,
+      length: Double,
+      depth: Double,
+      inside: Boolean = true
+  )(implicit conf: Config) = {
+    // TODO: currently ignores the finishing pass!
+    assert(
+      conf.workingPlane == Plane.XY,
+      "Currently only for XY working plane"
+    ) // FIXME makes the assertion works for the other planes
+    val cmds                  = ArrayBuffer.empty[Command]
     val (nTurn, effectiveDoC) = evenSteps(z, z - depth, conf.depthOfCut, conf.roundingError)
     for (i <- 0 until nTurn) {
-        layer(x, y, z + i * effectiveDoC,
-              width, length, effectiveDoC.abs,
-              inside, false, cmds)
-        cmds += G(0, Z(z + i * effectiveDoC + conf.travelHeight))
+      layer(x, y, z + i * effectiveDoC, width, length, effectiveDoC.abs, inside, false, cmds)
+      cmds += G(0, Z(z + i * effectiveDoC + conf.travelHeight))
     }
     cmds += G(0, Z(z + conf.travelHeight))
     cmds.toSeq
   }
 
-
-  def layer(x: Double, y: Double, z: Double, // lower left corner
-            width: Double, length: Double, depth: Double,
-            inside: Boolean = true, backToStart: Boolean = true,
-            _buffer: AbstractBuffer[Command] = null
-           )(implicit conf: Config) = {
+  def layer(
+      x: Double,
+      y: Double,
+      z: Double, // lower left corner
+      width: Double,
+      length: Double,
+      depth: Double,
+      inside: Boolean = true,
+      backToStart: Boolean = true,
+      _buffer: AbstractBuffer[Command] = null
+  )(implicit conf: Config) = {
     assert(!inside || width >= conf.endmillDiameter)
     assert(!inside || length >= conf.endmillDiameter)
     assert(depth >= 0.0, "depth should be positive")
     assert(depth <= conf.depthOfCut, "Should not plung more than the depth of cut")
     val buffer = if (_buffer != null) _buffer else ArrayBuffer.empty[Command]
     // go to initial position
-    val (a,b,c) = conf.toWorkplane(x,y,z)
-    val (da,db,dc) = conf.toWorkplane(width,length,depth)
-    val offset = if (inside) conf.endmillRadius else conf.widthOfCut - conf.endmillRadius
-    val a0 = a + offset
-    val a1 = a + da - offset
-    val b0 = b + offset
-    val b1 = b + db - offset
+    val (a, b, c)    = conf.toWorkplane(x, y, z)
+    val (da, db, dc) = conf.toWorkplane(width, length, depth)
+    val offset       = if (inside) conf.endmillRadius else conf.widthOfCut - conf.endmillRadius
+    val a0           = a + offset
+    val a1           = a + da - offset
+    val b0           = b + offset
+    val b1           = b + db - offset
     buffer += G(0, conf.x(a0), conf.y(b0))
     buffer += G(1, conf.z(c), F(conf.plungeFeed))
     buffer += Empty(F(conf.feed))
@@ -75,7 +87,7 @@ object Rectangle {
     }
     // spiral toward the center
     var delta = 0.0
-    //the first pass has a much bigger widthOfCut
+    // the first pass has a much bigger widthOfCut
     if (inside && conf.stepOver != 1.0) {
       if (conf.climb) {
         buffer += G(1, conf.x(a0), conf.y(b1))
@@ -94,10 +106,12 @@ object Rectangle {
       }
     }
     val fullCover = conf.endmillDiameter * math.max(0, conf.stepOver - math.sqrt(2))
-    val ma = (a1 - a0) / 2
-    val mb = (b1 - b0) / 2
-    while (delta + conf.endmillRadius < ma + conf.widthOfCut &&
-           delta + conf.endmillRadius < mb + conf.widthOfCut) {
+    val ma        = (a1 - a0) / 2
+    val mb        = (b1 - b0) / 2
+    while (
+      delta + conf.endmillRadius < ma + conf.widthOfCut &&
+      delta + conf.endmillRadius < mb + conf.widthOfCut
+    ) {
       if (conf.climb) {
         buffer += G(1, conf.x(a0 + delta), conf.y(b1 - delta))
         buffer += G(1, conf.x(a1 - delta), conf.y(b1 - delta))

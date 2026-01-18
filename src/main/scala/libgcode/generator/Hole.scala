@@ -1,7 +1,7 @@
 package libgcode.generator
 
 import libgcode.Command
-import libgcode.extractor._
+import libgcode.extractor.*
 import scala.math
 
 //   helix + circle at bottom, repeat from inside to outside
@@ -9,23 +9,28 @@ import scala.math
 
 object Hole {
 
-  def roughing(x: Double, y: Double, z: Double,
-               radius: Double, depth: Double,
-               insideOut: Boolean = true, depthFirst: Boolean = true
-              )(implicit conf: Config) = {
+  def roughing(
+      x: Double,
+      y: Double,
+      z: Double,
+      radius: Double,
+      depth: Double,
+      insideOut: Boolean = true,
+      depthFirst: Boolean = true
+  )(implicit conf: Config) = {
     val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
     buffer += Empty.comment(s"Hole (roughing)")
 
-    //some values used later
-    val (a,b,c) = conf.toWorkplane(x,y,z)
-    val endC = c - depth
-    val nTurns = (depth / conf.depthOfCut).ceil.toInt //make sure the helix are full turns
+    // some values used later
+    val (a, b, c)  = conf.toWorkplane(x, y, z)
+    val endC       = c - depth
+    val nTurns     = (depth / conf.depthOfCut).ceil.toInt // make sure the helix are full turns
     val helixDepth = nTurns * conf.depthOfCut
-    val startC = endC + helixDepth
-    val maxRadius = radius - conf.endmillRadius
-    //to call Helix, Spiral
-    val (x2,y2,z2) = conf.fromWorkplane(a,b,startC)
-    val z3 = conf.fromWorkplane(a,b,endC)._3
+    val startC     = endC + helixDepth
+    val maxRadius  = radius - conf.endmillRadius
+    // to call Helix, Spiral
+    val (x2, y2, z2) = conf.fromWorkplane(a, b, startC)
+    val z3           = conf.fromWorkplane(a, b, endC)._3
 
     def toNeutral = {
       if (insideOut) {
@@ -54,7 +59,7 @@ object Hole {
           buffer ++= Helix(x2, y2, z3, currentRadius, 0, 1, clockwise)
           toNeutral
         }
-        //TODO could change that to have even width of cut
+        // TODO: could change that to have even width of cut
         while (currentRadius < maxRadius) {
           currentRadius = math.min(maxRadius, currentRadius + conf.widthOfCut)
           buffer ++= Helix(x2, y2, z2, currentRadius, -conf.depthOfCut, nTurns, clockwise)
@@ -89,7 +94,7 @@ object Hole {
       var currentHeight = c
       while (currentHeight > endC) {
         currentHeight = math.max(endC, currentHeight - conf.depthOfCut)
-        val (x2,y2,z2) = conf.fromWorkplane(a,b,currentHeight)
+        val (x2, y2, z2) = conf.fromWorkplane(a, b, currentHeight)
         buffer ++= Spiral.roughing(x2, y2, z2, radius, insideOut)
       }
       toNeutral
@@ -98,15 +103,20 @@ object Hole {
     buffer.toSeq
   }
 
-  def finishing(x: Double, y: Double, z: Double,
-                radius: Double, depth: Double,
-                insideOut: Boolean = true, depthFirst: Boolean = true
-               )(implicit conf: Config) = {
+  def finishing(
+      x: Double,
+      y: Double,
+      z: Double,
+      radius: Double,
+      depth: Double,
+      insideOut: Boolean = true,
+      depthFirst: Boolean = true
+  )(implicit conf: Config) = {
     val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
     buffer += Empty.comment(s"Hole (finishing)")
 
-    val (a,b,c) = conf.toWorkplane(x,y,z)
-    val endC = c - depth
+    val (a, b, c) = conf.toWorkplane(x, y, z)
+    val endC      = c - depth
 
     def toNeutral = {
       buffer += G(0, conf.z(c - depth + conf.travelHeight))
@@ -115,15 +125,15 @@ object Hole {
     }
 
     if (insideOut) {
-      //this assumes that the cutting edge is longer than the depth
-      val (x2,y2,z2) = conf.fromWorkplane(a,b,endC)
-      buffer ++= Spiral.finishing(x2, y2, z2, radius, true) //Spiral take cutter radius into account
+      // this assumes that the cutting edge is longer than the depth
+      val (x2, y2, z2) = conf.fromWorkplane(a, b, endC)
+      buffer ++= Spiral.finishing(x2, y2, z2, radius, true) // Spiral take cutter radius into account
     } else {
-      val nTurns = (depth / conf.depthOfCut).ceil.toInt //make sure the helix are full turns
-      val helixDepth = nTurns * conf.depthOfCut
-      val startC = endC + helixDepth
-      val (x2,y2,z2) = conf.fromWorkplane(a, b, startC)
-      val (_, _, z3) = conf.fromWorkplane(a, b, endC)
+      val nTurns       = (depth / conf.depthOfCut).ceil.toInt // make sure the helix are full turns
+      val helixDepth   = nTurns * conf.depthOfCut
+      val startC       = endC + helixDepth
+      val (x2, y2, z2) = conf.fromWorkplane(a, b, startC)
+      val (_, _, z3)   = conf.fromWorkplane(a, b, endC)
       buffer ++= Helix(x2, y2, z2, radius - conf.endmillRadius, -conf.depthOfCut, nTurns, !conf.climb)
       buffer ++= Spiral.finishing(x2, y2, z3, radius, false)
     }
@@ -132,14 +142,20 @@ object Hole {
     buffer.toSeq
   }
 
-  def apply(x: Double, y: Double, z: Double,
-            radius: Double, depth: Double,
-            insideOut: Boolean = true, depthFirst: Boolean = true
-           )(implicit conf: Config) = {
+  def apply(
+      x: Double,
+      y: Double,
+      z: Double,
+      radius: Double,
+      depth: Double,
+      insideOut: Boolean = true,
+      depthFirst: Boolean = true
+  )(implicit conf: Config) = {
     val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
     buffer += Empty.comment(s"Hole")
     if (conf.finishingPass > 0.0) {
-      val rough = roughing(x, y, z, radius - conf.finishingPass, depth - conf.finishingPass, insideOut, depthFirst)(conf)
+      val rough =
+        roughing(x, y, z, radius - conf.finishingPass, depth - conf.finishingPass, insideOut, depthFirst)(conf)
       val finish = finishing(x, y, z, radius, depth, insideOut, depthFirst)(conf)
       rough ++ finish
     } else {

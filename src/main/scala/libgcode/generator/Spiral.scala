@@ -1,41 +1,53 @@
 package libgcode.generator
 
 import libgcode.Command
-import libgcode.extractor._
-import scala.math._
+import libgcode.extractor.*
+import scala.math.*
 import scala.collection.mutable.ArrayBuffer
 
-/** An appproximation of an Archimedean spiral with a serial of half circles.
- *  The spiral is terminated with a complete circle to get the right radius. */
+/** An appproximation of an Archimedean spiral with a serial of half circles. The spiral is terminated with a complete
+  * circle to get the right radius.
+  */
 object Spiral {
 
   // assume we are at the correct starting point
-  protected def circle(x: Double, y: Double, z: Double,
-                       r: Double, clockwise: Boolean, offset: Double,
-                       buffer: ArrayBuffer[Command], conf: Config) = {
-    val dir = if (clockwise) 2 else 3
-    val (a,b,c) = conf.toWorkplane(x,y,z)
-    val ra = r * cos(offset)
-    val rb = r * sin(offset)
+  protected def circle(
+      x: Double,
+      y: Double,
+      z: Double,
+      r: Double,
+      clockwise: Boolean,
+      offset: Double,
+      buffer: ArrayBuffer[Command],
+      conf: Config
+  ) = {
+    val dir       = if (clockwise) 2 else 3
+    val (a, b, c) = conf.toWorkplane(x, y, z)
+    val ra        = r * cos(offset)
+    val rb        = r * sin(offset)
     buffer += G(dir, conf.x(a - ra), conf.y(b - rb), conf.i(-ra), conf.j(-rb))
-    buffer += G(dir, conf.x(a + ra), conf.y(b + rb), conf.i( ra), conf.j( rb))
+    buffer += G(dir, conf.x(a + ra), conf.y(b + rb), conf.i(ra), conf.j(rb))
   }
-    
-  def roughing(x: Double, y: Double, z: Double, // center
-               radius: Double, insideOut: Boolean = true,
-               offset: Double = 0.0
-              )(implicit conf: Config) = {
+
+  def roughing(
+      x: Double,
+      y: Double,
+      z: Double, // center
+      radius: Double,
+      insideOut: Boolean = true,
+      offset: Double = 0.0
+  )(implicit conf: Config) = {
     // compute the width of the cut so we are doing full turns
     val maxEffectiveRadius = radius - conf.endmillRadius
-    val nTurn = (maxEffectiveRadius / conf.widthOfCut).ceil.toInt
-    val effectiveCut = maxEffectiveRadius / nTurn
+    val nTurn              = (maxEffectiveRadius / conf.widthOfCut).ceil.toInt
+    val effectiveCut       = maxEffectiveRadius / nTurn
     //
-    val (a,b,c) = conf.toWorkplane(x,y,z)
+    val (a, b, c) = conf.toWorkplane(x, y, z)
     var clockwise = insideOut != conf.climb
-    val dir = if (clockwise) 2 else 3
+    val dir       = if (clockwise) 2 else 3
     //
     def toPos(radius: Double, halfTurn: Boolean = false) = {
-      val o = offset + ( if (halfTurn) math.Pi else 0 )
+      val o  = offset + (if (halfTurn) math.Pi else 0)
       val ra = a + radius * cos(o)
       val rb = b + radius * sin(o)
       (ra, rb)
@@ -43,16 +55,16 @@ object Spiral {
     //
     val buffer = ArrayBuffer.empty[Command]
     buffer += Empty.comment(s"Spiral")
-    //one turn of the spiral
+    // one turn of the spiral
     def oneTurn(startRadius: Double, endRadius: Double) = {
-      val delta = endRadius - startRadius
+      val delta    = endRadius - startRadius
       val (a1, b1) = toPos(startRadius, false)
       val (a2, b2) = toPos(startRadius + delta / 2, true)
       val (a3, b3) = toPos(endRadius, false)
-      val ra1 = (a2 - a1) / 2
-      val rb1 = (b2 - b1) / 2
-      val ra2 = (a3 - a2) / 2
-      val rb2 = (b3 - b2) / 2
+      val ra1      = (a2 - a1) / 2
+      val rb1      = (b2 - b1) / 2
+      val ra2      = (a3 - a2) / 2
+      val rb2      = (b3 - b2) / 2
       buffer += G(dir, conf.x(a2), conf.y(b2), conf.i(ra1), conf.j(rb1))
       buffer += G(dir, conf.x(a3), conf.y(b3), conf.i(ra2), conf.j(rb2))
     }
@@ -90,22 +102,30 @@ object Spiral {
     buffer.toSeq
   }
 
-  def finishing(x: Double, y: Double, z: Double, // center
-            radius: Double, insideOut: Boolean = true,
-            offset: Double = 0.0
-           )(implicit conf: Config) = {
+  def finishing(
+      x: Double,
+      y: Double,
+      z: Double, // center
+      radius: Double,
+      insideOut: Boolean = true,
+      offset: Double = 0.0
+  )(implicit conf: Config) = {
     roughing(x, y, z, radius, insideOut, offset)(conf)
   }
 
-  def apply(x: Double, y: Double, z: Double, // center
-            radius: Double, insideOut: Boolean = true,
-            offset: Double = 0.0
-           )(implicit conf: Config) = {
+  def apply(
+      x: Double,
+      y: Double,
+      z: Double, // center
+      radius: Double,
+      insideOut: Boolean = true,
+      offset: Double = 0.0
+  )(implicit conf: Config) = {
     if (conf.finishingPass > 0.0) {
-      val (a,b,c) = conf.toWorkplane(x,y,z)
-      val (x2,y2,z2) = conf.fromWorkplane(a,b,c+conf.finishingPass)
-      val rough = roughing(x2, y2, z2, radius - conf.finishingPass, insideOut, offset)(conf)
-      val finish = finishing(x, y, z, radius, insideOut, offset)(conf)
+      val (a, b, c)    = conf.toWorkplane(x, y, z)
+      val (x2, y2, z2) = conf.fromWorkplane(a, b, c + conf.finishingPass)
+      val rough        = roughing(x2, y2, z2, radius - conf.finishingPass, insideOut, offset)(conf)
+      val finish       = finishing(x, y, z, radius, insideOut, offset)(conf)
       rough ++ finish
     } else {
       roughing(x, y, z, radius, insideOut, offset)(conf)

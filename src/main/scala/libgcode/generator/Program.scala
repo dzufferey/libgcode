@@ -1,11 +1,11 @@
 package libgcode.generator
 
-import libgcode._
-import libgcode.extractor._
+import libgcode.*
+import libgcode.extractor.*
 import libgcode.utils.Viewer
 import libgcode.abstractmachine.Plane
-import java.io._
-import java.nio.file._
+import java.io.*
+import java.nio.file.*
 
 abstract class Program(val conf: Config) {
 
@@ -44,12 +44,11 @@ abstract class Program(val conf: Config) {
 
 }
 
-
 object Program {
 
-  val absolute = G(90)
+  val absolute    = G(90)
   val incremental = G(91)
-  val inches = G(20)
-  val mm = G(21)
+  val inches      = G(20)
+  val mm          = G(21)
 
 }
