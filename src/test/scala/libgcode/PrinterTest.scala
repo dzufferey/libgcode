@@ -34,4 +34,17 @@ class PrinterTest extends AnyFunSuite {
                      |""".stripMargin
     assert(Printer.rolandDG(program) == expected)
   }
+
+  test("replaceComment 001") {
+    val cmd = Command(CmdType.G, Seq(1), Seq(X(1.0)), None, Some("old"))
+    //replace with a different comment
+    val cmd2 = cmd.replaceComment(Some("new"))
+    assert(cmd2.comment == Some("new"))
+    assert(cmd2.parameters == Seq(X(1.0)))
+    //replacing by the same comment returns the same command
+    assert(cmd2.replaceComment(Some("new")) eq cmd2)
+    //remove the comment
+    val cmd3 = cmd.replaceComment(None)
+    assert(cmd3.comment.isEmpty)
+  }
 }

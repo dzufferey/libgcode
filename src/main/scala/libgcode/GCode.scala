@@ -27,7 +27,7 @@ case class Command(
 
   def replaceComment(c: Option[String]) = {
     if (c == comment) this
-    else Command(ctype, code, parameters, line, comment)
+    else Command(ctype, code, parameters, line, c)
   }
 
 }

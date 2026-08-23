@@ -61,6 +61,9 @@ class AbstractMachine {
   }
 
   protected def linearMotion(x: Double, y: Double, z: Double, a: Double, b: Double, c: Double, f: Double) = {
+    // the distance (and therefore the time) only accounts for the X/Y/Z axes:
+    // the rotary A/B/C axes are not supported yet
+    assert(isEq(a, 0) && isEq(b, 0) && isEq(c, 0), s"linearMotion does not support rotary axes: a=$a, b=$b, c=$c")
     val coeff = if (useMillimeters) 1 else 25.4
     val x2    = coeff * x
     val y2    = coeff * y
@@ -82,7 +85,9 @@ class AbstractMachine {
     }
     // TODO: account for the rotation (a/b/c) ? (the position is given at tool tip so rotation should not matter)
     val distance = math.sqrt(x2 * x2 + y2 * y2 + z2 * z2)
-    time += f * distance * 60000 // from mm/minutes to ms
+    // f is the feedrate in mm/minutes, distance in mm:
+    // time (minutes) = distance / f, converted to ms
+    time += (distance / f) * 60000 // from mm/minutes to ms
   }
 
   protected def getRotationAngle(
@@ -164,10 +169,11 @@ class AbstractMachine {
       case YZ => getRotationAngle(cy, cz, this.y, this.z, y, z, clockwise, p)
     }
     val angle = arc.abs
-    val pitchOver2Pi: Double = plane match {
-      case XY => (z - this.z) / angle
-      case ZX => (y - this.y) / angle
-      case YZ => (x - this.x) / angle
+    // rise (orthogonal to the working plane) over the sweep
+    val rise: Double = plane match {
+      case XY => z - this.z
+      case ZX => y - this.y
+      case YZ => x - this.x
     }
 
     // update the coordinate
@@ -187,8 +193,12 @@ class AbstractMachine {
       this.c += c
     }
     // TODO: account for the rotation (a/b/c) ? (the position is given at tool tip so rotation should not matter)
-    val distance = angle * hypot(radius, pitchOver2Pi)
-    time += f * distance * 60000 // from mm/minutes to ms
+    // helix arc length: angle * hypot(radius, rise/angle) = hypot(radius*angle, rise)
+    // (the second form avoids a division by angle, which is 0 for a zero-sweep arc)
+    val distance = hypot(radius * angle, rise)
+    // f is the feedrate in mm/minutes, distance in mm:
+    // time (minutes) = distance / f, converted to ms
+    time += (distance / f) * 60000 // from mm/minutes to ms
   }
 
   protected def findCenter(

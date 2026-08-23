@@ -353,7 +353,7 @@ object Path {
       sys.error("empty path")
     } else if (children.size == 1 && children.head.isInstanceOf[Path]) {
       children.head.asInstanceOf[Path]
-    } else if (children.isInstanceOf[IndexedSeq[AbsCurve]] && children.forall(c => !c.isInstanceOf[Path])) {
+    } else if (children.isInstanceOf[IndexedSeq[_]] && children.forall(c => !c.isInstanceOf[Path])) {
       new Path(children.asInstanceOf[IndexedSeq[AbsCurve]])
     } else {
       val buffer = IndexedSeq.newBuilder[AbsCurve]

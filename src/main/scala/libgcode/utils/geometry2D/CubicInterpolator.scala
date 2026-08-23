@@ -6,6 +6,16 @@ import libgcode.Command
 import libgcode.extractor.*
 import scala.math
 
+/** A cubic Hermite interpolating spline in the plane, parameterised over `u ∈ [0, 1]`. It is the unique cubic
+  * polynomial curve `p(u) = (x(u), y(u))` that matches a given pair of endpoint positions and endpoint tangents:
+  *   - `p(0)` and `p(1)` are the start and end points,
+  *   - `p'(0)` and `p'(1)` are the start and end derivatives (tangent vectors).
+  *
+  * The class is most often built through the companion object's `apply`, which takes those four geometric values.
+  * Internally the curve is stored as the two cubic polynomials `x(u) = m1·u³ + n1·u² + o1·u + p1` and `y(u) = m2·u³ +
+  * n2·u² + o2·u + p2` so the constructor arguments `m1 n1 o1 p1 / m2 n2 o2 p2` are the raw polynomial coefficients (the
+  * constant term `p1`/`p2` is the start point, the linear term `o1`/`o2` is the start derivative, etc.).
+  */
 class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double, m2: Double, n2: Double, o2: Double, p2: Double)
     extends Curve[CubicInterpolator] {
 
@@ -43,10 +53,41 @@ class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double, m2: Doub
     }
   }
 
-  def length = {
-    val a = m1 / 4 + n1 / 3 + o1 / 2 + p1
-    val b = m2 / 4 + n2 / 3 + o2 / 2 + p2
-    math.hypot(a, b)
+  /** The length of the curve, computed by adaptive quadrature of |p'(u)|. There is no closed form for the arc length of
+    * a cubic polynomial, so we integrate |p'(u)| = √(x'(u)² + y'(u)²) numerically.
+    */
+  override def length: Double = {
+    // Numerical integration of |p'(u)| = √(x'(u)² + y'(u)²) on [0, 1]
+    // using adaptive Simpson's rule.
+    //
+    // A naive fixed number of samples underestimates the length because
+    // the chord length of a sub-interval is always ≤ its arc length;
+    // we subdivide until the difference between the 1- and 2-panel
+    // Simpson estimates is smaller than the tolerance (which makes the
+    // Simpson estimate itself accurate to within the tolerance).
+    def speed(u: Double) = {
+      val (a, b) = derivative(u)
+      math.hypot(a, b)
+    }
+    // Simpson's rule on [u0, u1] (exact for cubics in u; |p'| is a
+    // 6th-degree polynomial in u, so we need subdivision for accuracy)
+    def simpson(u0: Double, u1: Double): Double = {
+      val h = (u1 - u0) / 2
+      (h / 3) * (speed(u0) + 4 * speed((u0 + u1) / 2) + speed(u1))
+    }
+    def integrate(u0: Double, u1: Double): Double = {
+      val mid   = (u0 + u1) / 2
+      val whole = simpson(u0, u1)
+      val half  = simpson(u0, mid) + simpson(mid, u1)
+      if ((whole - half).abs < 1e-8) {
+        // Richardson extrapolation: the error of Simpson is O(h⁴),
+        // so combining the two estimates cancels the leading error term
+        half + (half - whole) / 15
+      } else {
+        (integrate(u0, mid) + integrate(mid, u1))
+      }
+    }
+    integrate(0, 1)
   }
 
   def derivative(u: Double) = {
@@ -167,6 +208,24 @@ class CubicInterpolator(m1: Double, n1: Double, o1: Double, p1: Double, m2: Doub
 
 object CubicInterpolator {
 
+  /** Build the cubic Hermite curve that starts at `(a1, b1)` with derivative `(da1, db1)` and ends at `(a2, b2)` with
+    * derivative `(da2, db2)`.
+    *
+    * In other words it solves, for each coordinate independently, `c(0) = a1` `c'(0) = da1` `c(1) = a2` `c'(1) = da2`
+    * (and likewise for `b1, db1, b2, db2`).
+    *
+    * Beware: the eight arguments are positional doubles, so passing them in the wrong order silently builds a different
+    * (possibly self-intersecting) curve.
+    *
+    * @param a1,
+    *   b1 start point `p(0)`
+    * @param da1,
+    *   db1 start derivative `p'(0)` (tangent vector at `u = 0`)
+    * @param a2,
+    *   b2 end point `p(1)`
+    * @param da2,
+    *   db2 end derivative `p'(1)` (tangent vector at `u = 1`)
+    */
   def apply(
       a1: Double,
       b1: Double, // start point
