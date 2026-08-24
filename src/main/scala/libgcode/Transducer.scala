@@ -31,23 +31,23 @@ trait Transducer {
     written += header.length
     printer.header
     printer(header)
-    while (input.ready()) {
-      val line = input.readLine.trim
+    // readLine() is the documented way to detect EOF (it returns null); the
+    // older while (input.ready()) { readLine() } pattern could observe ready()
+    // true while readLine() yielded null (an unguarded null .trim). Blank
+    // lines need no special-casing: Parser.cmd already parses them to an
+    // Empty command.
+    var line: String = input.readLine()
+    while (line != null) {
       read += 1
-      var cmd: Command = null
-      if (line == "") {
-        cmd = Command(CmdType.Empty, Nil, Nil, None, None)
-      } else {
-        parse(line, Parser.cmd(_)) match {
-          case Parsed.Success(c, _) =>
-            cmd = c
-          case f @ Parsed.Failure(parser, _, _) =>
-            sys.error("parsing failure: " + parser.toString + " with " + f.trace().longMsg)
-        }
+      parse(line.trim, Parser.cmd(_)) match {
+        case Parsed.Success(c, _) =>
+          val cs = transform(c)
+          written += cs.length
+          printer(cs)
+        case f @ Parsed.Failure(parser, _, _) =>
+          sys.error("parsing failure: " + parser.toString + " with " + f.trace().longMsg)
       }
-      val cs = transform(cmd)
-      written += cs.length
-      printer(cs)
+      line = input.readLine()
     }
     val footer = finish
     written += footer.length

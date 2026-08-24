@@ -36,4 +36,21 @@ class TransducerTest extends AnyFunSuite {
     }
   }
 
+  // Regression: the input must be read line-by-line to EOF regardless of
+  // whether the last line carries a trailing newline, and must not trip on the
+  // ready()/readLine()==null EOF boundary. (In-memory reader, no resource file.)
+  test("ID handles a final line without a trailing newline") {
+    def run(body: String) = {
+      val id     = new ID
+      val reader = new BufferedReader(new StringReader(body))
+      val writer = new BufferedWriter(new StringWriter)
+      id.transduce(reader, writer)
+    }
+    assert(run("G0 X1\nG1 Y2") == (2, 2))        // no trailing newline
+    assert(run("G0 X1\nG1 Y2\n") == (2, 2))      // trailing newline
+    assert(run("G0 X1") == (1, 1))               // single line, no newline
+    assert(run("G0 X1\n\nG1 Y2\n") == (3, 3))    // blank middle line counted
+    assert(run("") == (0, 0))                    // empty input
+  }
+
 }

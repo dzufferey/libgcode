@@ -7,19 +7,27 @@ import Plane.*
 
 class AbstractMachine {
 
-  val maxFeed = 2500.0 // for G0
+  val INCH = 25.4 // mm per inch
 
-  // position
+  // All internal state is stored in millimeters (and feedrates in mm/min).
+  // Command values (from the program) are in command units (mm under G21,
+  // inches under G20) and must be converted with cmdToMm before touching
+  // state; state is read back in command units with mmToCmd. The motion
+  // primitives (linearMotion/circularMotion/findCenter) are unit-agnostic and
+  // operate purely in mm.
+  val maxFeed = 2500.0 // rapid feedrate, mm/min (machine specific) // for G0
+
+  // position (mm)
   var x = 0.0
   var y = 0.0
   var z = 0.0
 
-  // orientation
+  // orientation (degrees, unit-independent)
   var a = 0.0
   var b = 0.0
   var c = 0.0
 
-  var time = 0.0
+  var time = 0.0 // ms
 
   var mode = 0 // valid: 0, 1, 2, 3, 81, 82, 83
 
@@ -27,7 +35,7 @@ class AbstractMachine {
 
   var useMillimeters = true
 
-  var feedrate = 1.0
+  var feedrate = 1.0 // mm/min (internal); see setFeed for the command-unit entry point
 
   var plane = XY
 
@@ -43,7 +51,7 @@ class AbstractMachine {
   var zRetract: Option[Double]     = None
   var peckDistance: Option[Double] = None
   var dwellTime: Option[Int]       = None
-  val peckStartOffset              = 1.0  // machine specific
+  val peckStartOffset = 1.0 // machine specific, in mm: how close to the peck start the tool may dive from (hover level)
 
   // TODO: ?
   // cooling
@@ -52,39 +60,39 @@ class AbstractMachine {
 
   protected def isEq(a: Double, b: Double) = (a - b).abs < 1e-5
 
-  protected def setFeed(f: Double) = {
-    if (useMillimeters) {
-      feedrate = f
-    } else {
-      feedrate = f * 25.4
-    }
-  }
+  // the only place the unit conversion and its direction live
+  protected def cmdToMm(cmd: Double): Double = if (useMillimeters) cmd else cmd * INCH
+  protected def mmToCmd(mm: Double): Double  = if (useMillimeters) mm else mm / INCH
+
+  // f is a command-unit feedrate (mm/min under G21, in/min under G20);
+  // feedrate is stored internally in mm/min
+  protected def setFeed(f: Double) = feedrate = cmdToMm(f)
 
   protected def linearMotion(x: Double, y: Double, z: Double, a: Double, b: Double, c: Double, f: Double) = {
     // the distance (and therefore the time) only accounts for the X/Y/Z axes:
     // the rotary A/B/C axes are not supported yet
     assert(isEq(a, 0) && isEq(b, 0) && isEq(c, 0), s"linearMotion does not support rotary axes: a=$a, b=$b, c=$c")
-    val coeff = if (useMillimeters) 1 else 25.4
-    val x2    = coeff * x
-    val y2    = coeff * y
-    val z2    = coeff * z
+    // displacement from the current position (in mm)
+    val dx = if (absoluteCoordinates) x - this.x else x
+    val dy = if (absoluteCoordinates) y - this.y else y
+    val dz = if (absoluteCoordinates) z - this.z else z
     if (absoluteCoordinates) {
-      this.x = x2
-      this.y = y2
-      this.z = z2
+      this.x = x
+      this.y = y
+      this.z = z
       this.a = a
       this.b = b
       this.c = c
     } else {
-      this.x += x2
-      this.y += y2
-      this.z += z2
+      this.x += x
+      this.y += y
+      this.z += z
       this.a += a
       this.b += b
       this.c += c
     }
     // TODO: account for the rotation (a/b/c) ? (the position is given at tool tip so rotation should not matter)
-    val distance = math.sqrt(x2 * x2 + y2 * y2 + z2 * z2)
+    val distance = math.sqrt(dx * dx + dy * dy + dz * dz)
     // f is the feedrate in mm/minutes, distance in mm:
     // time (minutes) = distance / f, converted to ms
     time += (distance / f) * 60000 // from mm/minutes to ms
@@ -112,16 +120,17 @@ class AbstractMachine {
     a + turnAngle
   }
 
+  // Unit-agnostic: all lengths in mm (already converted by the caller), f in mm/min.
   protected def circularMotion(
-      _x: Double,
-      _y: Double,
-      _z: Double, // end position
+      x: Double,
+      y: Double,
+      z: Double, // end position
       a: Double,
       b: Double,
       c: Double, // end orientation
-      _i: Double,
-      _j: Double,
-      _k: Double, // center of rotation (relative coord)
+      i: Double,
+      j: Double,
+      k: Double, // center of rotation (relative coord)
       clockwise: Boolean,
       p: Int,
       f: Double
@@ -132,15 +141,6 @@ class AbstractMachine {
     // z(t) = b * t
     // a is the radius
     // b is the pitch / 2π
-
-    // convert to millimeters
-    val coeff = if (useMillimeters) 1 else 25.4
-    val x     = coeff * _x
-    val y     = coeff * _y
-    val z     = coeff * _z
-    val i     = coeff * _i
-    val j     = coeff * _j
-    val k     = coeff * _k
 
     // get the center
     val cx = this.x + i
@@ -201,16 +201,15 @@ class AbstractMachine {
     time += (distance / f) * 60000 // from mm/minutes to ms
   }
 
+  // Unit-agnostic: all lengths in mm (already converted by the caller).
   protected def findCenter(
       x1: Double,
-      y1: Double, // start position (machine state)
-      _x2: Double,
-      _y2: Double, // end position (from the command)
-      r: Double,
+      y1: Double, // start position (machine state, mm)
+      x2: Double,
+      y2: Double, // end position (mm)
+      r: Double,  // radius (mm)
       clockwise: Boolean
   ): (Double, Double) = {
-    val x2 = if (useMillimeters) _x2 else 25.4 * _x2
-    val y2 = if (useMillimeters) _y2 else 25.4 * _y2
     assert(!isEq(x1, x2) || !isEq(y1, y2), "ill-formed command " + (if (clockwise) "G2" else "G3"))
     // middle point
     val mx = (x1 + x2) / 2
@@ -227,34 +226,20 @@ class AbstractMachine {
     val ny = (if (clockwise) -dx else dx) / hypot(dx, dy)
     val px = mx + nx * k
     val py = my + ny * k
-    if (useMillimeters) (px, py)
-    else (px / 25.4, py / 25.4)
+    (px, py)
   }
 
-  // helper to compute the end position of a motion: default value of the arguments
-  protected def getX = {
-    if absoluteCoordinates then
-      if useMillimeters then x
-      else x / 25.4
-    else 0.0
-  }
-  protected def getY = {
-    if absoluteCoordinates then
-      if useMillimeters then y
-      else y / 25.4
-    else 0.0
-  }
-  protected def getZ = {
-    if absoluteCoordinates then
-      if useMillimeters then z
-      else z / 25.4
-    else 0.0
-  }
+  // helper to compute the end position of a motion: default value of the arguments.
+  // Returns command units (the unit the program is written in).
+  protected def getX = if (absoluteCoordinates) mmToCmd(x) else 0.0
+  protected def getY = if (absoluteCoordinates) mmToCmd(y) else 0.0
+  protected def getZ = if (absoluteCoordinates) mmToCmd(z) else 0.0
   protected def getA = if absoluteCoordinates then a else 0.0
   protected def getB = if absoluteCoordinates then b else 0.0
   protected def getC = if absoluteCoordinates then c else 0.0
 
   def handleLinear(params: Seq[Param]) = {
+    // default end position in command units
     var x = getX
     var y = getY
     var z = getZ
@@ -271,8 +256,13 @@ class AbstractMachine {
       case F(v)  => setFeed(v)
       case other => sys.error("in G0 or G1, unexpected param: " + other)
     }
-    var f = if (mode == 1) feedrate else maxFeed
-    linearMotion(x, y, z, a, b, c, f)
+    // normalize the end position to mm (the unit-agnostic boundary)
+    val xm = cmdToMm(x)
+    val ym = cmdToMm(y)
+    val zm = cmdToMm(z)
+    // feedrate and maxFeed are both internal mm/min
+    val f = if (mode == 1) feedrate else maxFeed
+    linearMotion(xm, ym, zm, a, b, c, f)
   }
 
   def handleRotate(params: Seq[Param]) = {
@@ -308,23 +298,31 @@ class AbstractMachine {
       case other => sys.error("in G2 or G3, unexpected param: " + other)
     }
     assert(r >= 0, "ill-formed G2/3 command: radius = " + r)
-    if (r > 0) {
+    // normalize to mm (the unit-agnostic boundary for findCenter/circularMotion)
+    val xm = cmdToMm(x)
+    val ym = cmdToMm(y)
+    val zm = cmdToMm(z)
+    val im = cmdToMm(i)
+    val jm = cmdToMm(j)
+    val km = cmdToMm(k)
+    val rm = cmdToMm(r)
+    if (rm > 0) {
       plane match {
         case XY =>
-          val (c1, c2) = findCenter(this.x, this.y, x, y, r, clockwise)
-          i = c1 - getX
-          j = c2 - getY
+          val (c1, c2) = findCenter(this.x, this.y, xm, ym, rm, clockwise)
+          i = c1 - this.x
+          j = c2 - this.y
         case ZX =>
-          val (c1, c2) = findCenter(this.z, this.x, z, x, r, clockwise)
-          k = c1 - getZ
-          i = c2 - getX
+          val (c1, c2) = findCenter(this.z, this.x, zm, xm, rm, clockwise)
+          k = c1 - this.z
+          i = c2 - this.x
         case YZ =>
-          val (c1, c2) = findCenter(this.y, this.z, y, z, r, clockwise)
-          j = c1 - getY
-          k = c2 - getZ
+          val (c1, c2) = findCenter(this.y, this.z, ym, zm, rm, clockwise)
+          j = c1 - this.y
+          k = c2 - this.z
       }
     }
-    circularMotion(x, y, z, a, b, c, i, j, k, clockwise, p, feedrate)
+    circularMotion(xm, ym, zm, a, b, c, im, jm, km, clockwise, p, feedrate)
   }
 
   def handleDrillingCycle(params: Seq[Param]) = {
@@ -345,26 +343,55 @@ class AbstractMachine {
       case P(v)  => dwellTime = Some(v)
       case other => sys.error("in G81-3 unexpected param: " + other)
     }
-    // expand the drilling int a sequence of linear motions
+    // validate the cycle parameters (they persist as modal state, so a bare
+    // G81 Z.. without a prior R must fail loudly rather than throw None.get)
+    val retract = zRetract.getOrElse(sys.error("G81-83 requires R (retract level)"))
+    val q =
+      if (mode == 83) {
+        val q0 = peckDistance.getOrElse(sys.error("G83 requires Q (peck distance)"))
+        assert(q0 > 0, "G83 requires Q > 0, got " + q0)
+        q0
+      } else 0.0
+    // drill direction in Z: from the retract level toward the hole depth
+    assert(!isEq(retract, z), "ill-formed cycle: R and Z are equal (" + retract + ")")
+    val direction = if (z < retract) -1.0 else 1.0
+    // Normalize the command-unit values to mm: the cycle geometry (direction,
+    // peck stepping, hover) is computed in mm, matching the unit-agnostic
+    // linearMotion. peckStartOffset and maxFeed are machine constants already
+    // in mm / mm/min, so they need no conversion.
+    val xm  = cmdToMm(x)
+    val ym  = cmdToMm(y)
+    val zm  = cmdToMm(z)
+    val rM  = cmdToMm(retract)
+    val qM  = cmdToMm(q)
+    val z0M = cmdToMm(getZ) // current Z, in mm
+    // expand the drilling into a sequence of linear motions
     // 1. get to initial position: XY rapid, then Z rapid to R
-    linearMotion(x, y, getZ, getA, getB, getC, maxFeed)
-    linearMotion(getX, getY, zRetract.get, getA, getB, getC, maxFeed)
-    // 2. drill
-    var lastZ = zRetract.get
-    while (lastZ > z) {
-      // move to start of peck
-      if (getZ > lastZ + peckStartOffset) {
-        linearMotion(getX, getY, lastZ + peckStartOffset, getA, getB, getC, maxFeed)
+    linearMotion(xm, ym, z0M, getA, getB, getC, maxFeed)
+    linearMotion(xm, ym, rM, getA, getB, getC, maxFeed)
+    // 2. drill / peck. The tool always retracts to R between pecks, so each
+    // feed starts from R and advances one Q toward the hole (clamped at z).
+    var depth = 0.0 // cumulative depth from R, in the direction of the hole (mm)
+    while (!isEq(rM + direction * depth, zm)) {
+      // peck target: one Q deeper, clamped at the hole depth
+      depth = if (mode == 83) min(depth + qM, (zm - rM) * direction) else (zm - rM) * direction
+      val target = rM + direction * depth
+      // rapid to a hover level peckStart above the peck target (on the
+      // retract side), so the feed move only covers the last peckStart of the
+      // peck. If the hover is at or above the retract level, skip it.
+      val hover = target - direction * peckStartOffset
+      if ((hover - rM) * direction > 0) {
+        linearMotion(xm, ym, hover, getA, getB, getC, maxFeed)
       }
-      // peck/drill
-      lastZ = if (mode == 83) max(z, lastZ - peckDistance.get) else z
-      linearMotion(getX, getY, lastZ, getA, getB, getC, feedrate)
-      // dwell at last step
-      if (lastZ == z && mode == 82) {
-        run(G(4, P(dwellTime.get)))
+      // feed from the hover (or retract) to the peck target
+      linearMotion(xm, ym, target, getA, getB, getC, feedrate)
+      // dwell at the last step (isEq: target and z may differ by rounding)
+      if (mode == 82 && isEq(target, zm)) {
+        val dwellMs = dwellTime.getOrElse(0)
+        time += dwellMs
       }
       // retract
-      linearMotion(getX, getY, zRetract.get, getA, getB, getC, maxFeed)
+      linearMotion(xm, ym, rM, getA, getB, getC, maxFeed)
     }
   }
 
@@ -420,11 +447,10 @@ class AbstractMachine {
         case G(91, 0, Seq()) => absoluteCoordinates = false
         case G(92, 0, params) =>
           assert(params.nonEmpty)
-          val coeff = if (useMillimeters) 1 else 25.4
           params.foreach {
-            case X(v)  => x = coeff * v
-            case Y(v)  => y = coeff * v
-            case Z(v)  => z = coeff * v
+            case X(v)  => x = cmdToMm(v)
+            case Y(v)  => y = cmdToMm(v)
+            case Z(v)  => z = cmdToMm(v)
             case A(v)  => a = v
             case B(v)  => b = v
             case C(v)  => c = v
@@ -436,11 +462,7 @@ class AbstractMachine {
         case M(4, 0, Seq(S(cclockwise))) => spindleRPM = -cclockwise
         case M(5, 0, Seq())              => spindleRPM = 0
         case M(114, 0, Seq()) =>
-          if (useMillimeters) {
-            return f"X:${x} Y:${y} Z:${z} A:${a} B:${b} C:${c}"
-          } else {
-            return f"X:${x / 25.4} Y:${y / 25.4} Z:${z / 25.4} A:${a} B:${b} C:${c}"
-          }
+          return f"X:${mmToCmd(x)} Y:${mmToCmd(y)} Z:${mmToCmd(z)} A:${a} B:${b} C:${c}"
         case Empty(Seq(F(f))) =>
           setFeed(f)
         case Empty(Seq(T(i))) =>

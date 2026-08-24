@@ -51,10 +51,15 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
     children.foldLeft(0.0)((acc, c) => acc + c.length)
   }
 
+  // Path re-parameterizes the children with a single global u in [0,1]
+  // (equal-weight: expand maps u -> (i, u2) with u2 = u * n - i, so du2/du = n).
+  // By the chain rule, dP/du = children(i).derivative(u2) * (du2/du) = * n.
+  // (curvature below is a geometric invariant and is correctly passed through
+  // unscaled.)
   def derivative(u: Double): (Double, Double) = {
     val (i, u2) = expand(u)
     val (a, b)  = children(i).derivative(u2)
-    (a / children.size, b / children.size)
+    (a * children.size, b * children.size)
   }
 
   // signed

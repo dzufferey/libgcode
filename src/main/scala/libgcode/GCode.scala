@@ -1,5 +1,6 @@
 package libgcode
 
+import java.math.RoundingMode
 import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.util.Locale
 
@@ -50,9 +51,16 @@ object RealParam {
   val types            = Set(A, B, C, D, E, F, H, I, J, K, Q, R, X, Y, Z)
   def is(t: ParamType) = types(t)
 
-  protected val df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH))
-  df.setMaximumFractionDigits(340)
-  def format(d: Double) = df.format(d)
+  // DecimalFormat is not thread-safe.
+  protected val df = new ThreadLocal[DecimalFormat] {
+    override def initialValue: DecimalFormat = {
+      val f = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH))
+      f.setMaximumFractionDigits(10)
+      f.setRoundingMode(RoundingMode.HALF_UP)
+      f
+    }
+  }
+  def format(d: Double) = df.get.format(d)
 }
 
 object IntParam {
