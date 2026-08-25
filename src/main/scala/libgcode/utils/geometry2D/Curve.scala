@@ -160,7 +160,12 @@ trait AbsCurve {
 
 trait Curve[A <: Curve[A]] extends AbsCurve {
 
-  def offset(x: Double, tolerance: Double = 1e-6): A
+  // Returns AbsCurve (not A) so that a curve whose exact offset cannot be
+  // represented by a single segment (e.g. a cubic) may return a Path of the
+  // adaptive sub-cubics instead. Line and Arc still return their concrete type
+  // (an offset of a line/arc is exact), but the contract only requires an
+  // AbsCurve, which Path.pureOffset already consumes through the AbsCurve type.
+  def offset(x: Double, tolerance: Double = 1e-6): AbsCurve
 
   def translate(a: Double, b: Double): A
 

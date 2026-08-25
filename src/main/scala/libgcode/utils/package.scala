@@ -8,18 +8,23 @@ package object utils {
   def newton(f: Double => Double,
              fp: Double => Double,
              x0: Double,
-             progress: Double = 1e-10,
-             tolerance: Double = 1e-10) = {
+             tolerance: Double = 1e-10,
+             progress: Double = 1e-10) = {
     // do an iteration so the while loop condition makes sense
     var old = f(x0)
     var x = x0 - f(x0)/fp(x0)
     var curr = f(x)
-    while (curr.abs < tolerance &&
-           (curr - old).abs > progress &&
-           curr.abs < old.abs) {
+    // Newton is said to have converged as soon as f(x) is smaller than tolerance
+    // (the loop keeps iterating while |f(x)| >= tolerance). A maximum number of
+    // iterations guards against non-convergent iterations (e.g. when the start is
+    // outside the basin of attraction); the caller decides whether the result is
+    // good enough by checking |f(x)|.
+    var i = 0
+    while (curr.abs >= tolerance && i < 100) {
       old = curr
       x = x - curr/fp(x)
       curr = f(x)
+      i += 1
     }
     if (curr.abs < tolerance) {
       Some(x)

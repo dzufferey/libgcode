@@ -159,12 +159,18 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     pts.size > 0 // TODO: check derivative for tangent
   }
 
+  // A Line's offset is exactly a Line (parallel), so it is safe to view the
+  // AbsCurve result as a Line here. Curve.offset returns AbsCurve in general so
+  // that a cubic may return a Path, but for a Line it is always a Line.
+  private def lineOffset(l: Line, x: Double, tolerance: Double): Line =
+    l.offset(x, tolerance).asInstanceOf[Line]
+
   protected def putOnCircles(l: Line, a: Arc, tolerance: Double) = {
-    val l1 = l.offset(r, tolerance)
+    val l1 = lineOffset(l, r, tolerance)
     if (onCircle(l1, tolerance) && a.onCircle(l1, tolerance)) {
       l1
     } else {
-      val l2 = l.offset(-r, tolerance)
+      val l2 = lineOffset(l, -r, tolerance)
       assert(onCircle(l2, tolerance) && a.onCircle(l2, tolerance))
       l2
     }
@@ -182,7 +188,7 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
   def outerTangents(arc: Arc, ignoreBounds: Boolean = false, tolerance: Double = 1e-6): Seq[Line] = {
     if (compare(r, arc.r, tolerance) == 0) {
       val l = Line(a, b, arc.a, arc.b)
-      Seq(l.offset(r, tolerance), l.offset(-r, tolerance)).filter(tangentInBounds(_, ignoreBounds, tolerance))
+      Seq(lineOffset(l, r, tolerance), lineOffset(l, -r, tolerance)).filter(tangentInBounds(_, ignoreBounds, tolerance))
     } else {
       val os = Arc(arc.a, arc.b, arc.r - r, 0, 2 * math.Pi).tangents2Point(a, b, true, tolerance)
       os.map(putOnCircles(_, arc, tolerance)).filter(tangentInBounds(_, ignoreBounds, tolerance))
