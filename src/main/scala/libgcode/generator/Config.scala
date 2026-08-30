@@ -87,4 +87,9 @@ class Config {
 
   var roundingError = 1e-6
 
+  /** Geometric tolerance for approximating curves (splines) by g-code lines and arcs.
+    * A line/arc leaf of the approximation must stay within this distance of the true curve.
+    */
+  var tolerance = 0.01
+
 }

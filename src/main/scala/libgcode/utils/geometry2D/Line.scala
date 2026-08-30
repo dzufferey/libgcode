@@ -215,6 +215,9 @@ class Line(
     Seq(G(1, config.x(a2), config.y(b2)))
   }
 
+  // a line IS a line/arc path (itself), exact for any tolerance
+  def toPath(tolerance: Double): Path = Path(IndexedSeq(this))
+
 }
 
 object Line {

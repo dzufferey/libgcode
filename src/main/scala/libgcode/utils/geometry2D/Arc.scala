@@ -313,6 +313,9 @@ class Arc(val a: Double, val b: Double, val r: Double, val alpha: Double, val be
     Seq(G(dir, config.x(a1), config.y(b1), config.i(a - a0), config.j(b - b0)))
   }
 
+  // an arc IS a line/arc path (itself), exact for any tolerance
+  def toPath(tolerance: Double): Path = Path(IndexedSeq(this))
+
 }
 
 object Arc {

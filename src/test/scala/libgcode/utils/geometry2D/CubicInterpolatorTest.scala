@@ -1,5 +1,10 @@
 package libgcode.utils.geometry2D
 
+import libgcode.utils.*
+import libgcode.{Command, CmdType}
+import libgcode.generator.Config
+import libgcode.abstractmachine.AbstractMachine
+import libgcode.extractor.{G, X, Y, I, J, F, Empty}
 import org.scalatest.funsuite.AnyFunSuite
 
 class CubicInterpolatorTest extends AnyFunSuite {
@@ -781,6 +786,236 @@ class CubicInterpolatorTest extends AnyFunSuite {
     val off = arcR2.offset(-0.3, 1e-6)
     val err = maxRadiusError(off, 2.3)
     assert(err < 1e-3, s"max radius error $err exceeds tol")
+  }
+
+  // ---- toGCode (approximation by G1 lines and G2/G3 arcs) ----
+
+  def confTol(tol: Double): Config = {
+    val conf = new Config
+    conf.tolerance = tol
+    conf
+  }
+
+  // Reconstruct the Line/Arc path that the emitted commands trace, starting
+  // from `start`. The Path constructor asserts the children connect, which
+  // doubles as a continuity check of the command sequence.
+  def pathOf(cmds: Seq[Command], start: (Double, Double)): Path = {
+    var pos  = start
+    val segs = scala.collection.mutable.ArrayBuffer.empty[AbsCurve]
+    for (c <- cmds) {
+      c match {
+        case Command(CmdType.G, Seq(1), params, _, _) =>
+          val x = params.collectFirst { case X(v) => v }.get
+          val y = params.collectFirst { case Y(v) => v }.get
+          if (distance(pos._1, pos._2, x, y) > 1e-9) segs += Line(pos._1, pos._2, x, y)
+          pos = (x, y)
+        case Command(CmdType.G, Seq(2 | 3), params, _, _) =>
+          val x = params.collectFirst { case X(v) => v }.get
+          val y = params.collectFirst { case Y(v) => v }.get
+          val i = params.collectFirst { case I(v) => v }.get
+          val j = params.collectFirst { case J(v) => v }.get
+          val cxa = pos._1 + i
+          val cya = pos._2 + j
+          val r   = math.hypot(pos._1 - cxa, pos._2 - cya)
+          val a0  = math.atan2(pos._2 - cya, pos._1 - cxa)
+          val b0  = math.atan2(y - cya, x - cxa)
+          // G2 sweeps clockwise, G3 counter-clockwise
+          val beta =
+            if (c.code(0) == 2) { if (b0 >= a0) b0 - 2 * math.Pi else b0 }
+            else                { if (b0 <= a0) b0 + 2 * math.Pi else b0 }
+          if (beta != a0) segs += Arc(cxa, cya, r, a0, beta)
+          pos = (x, y)
+        case other => fail(s"unexpected command: $other")
+      }
+    }
+    Path(segs.toIndexedSeq)
+  }
+
+  // Distance from a point to a curve: exact orthogonal projection for a Line,
+  // radial projection (or the nearer endpoint) for an Arc. `pathOf` only
+  // builds Lines and Arcs, so this covers every child of the approximation.
+  def distTo(c: AbsCurve, x: Double, y: Double): Double = c match {
+    case l: Line =>
+      val (xa, ya) = l(0.0)
+      val (xb, yb) = l(1.0)
+      val dx       = xb - xa
+      val dy       = yb - ya
+      val t        = ((x - xa) * dx + (y - ya) * dy) / (dx * dx + dy * dy)
+      math.hypot(x - (xa + t * dx), y - (ya + t * dy))
+    case a: Arc =>
+      val d = math.hypot(x - a.a, y - a.b)
+      if (d < 1e-12) a.r // the point is the center
+      else {
+        // same angle-range test as Arc.get (handles the angle wrap)
+        val th = math.atan2(y - a.b, x - a.a)
+        val k  = if (a.alpha < a.beta) ((a.alpha - th) / (2 * math.Pi)).ceil
+                 else                   ((a.alpha - th) / (2 * math.Pi)).floor
+        val u  = (th + k * 2 * math.Pi - a.alpha) / (a.beta - a.alpha)
+        if (u >= 0 && u <= 1) {
+          (d - a.r).abs
+        } else {
+          val sa = (a.a + a.r * math.cos(a.alpha), a.b + a.r * math.sin(a.alpha))
+          val sb = (a.a + a.r * math.cos(a.beta), a.b + a.r * math.sin(a.beta))
+          math.min(math.hypot(x - sa._1, y - sa._2), math.hypot(x - sb._1, y - sb._2))
+        }
+      }
+    case other => sys.error(s"distTo: unsupported curve type ${other.getClass}")
+  }
+
+  // Max distance from dense samples of `curve` to the approximation `path`
+  // (each sample is projected onto every child, the min distance is taken).
+  // This is the error of the g-code approximation.
+  def maxDeviation(curve: AbsCurve, path: Path, n: Int = 1000): Double = {
+    var max = 0.0
+    for (i <- 0 to n) {
+      val (x, y) = curve(i / n.toDouble)
+      var d = Double.PositiveInfinity
+      for (c <- path.children) d = math.min(d, distTo(c, x, y))
+      max = math.max(max, d)
+    }
+    max
+  }
+
+  test("cubic toGCode 01: a line cubic becomes a single G1") {
+    val c = CubicInterpolator(0, 0, 3, 4, 3, 4, 3, 4)
+    val cmds = c.toGCode(confTol(1e-6))
+    assert(cmds.size == 1, s"expected 1 command, got ${cmds.size}")
+    cmds(0) match {
+      case Command(CmdType.G, Seq(1), Seq(X(x), Y(y)), _, _) =>
+        assert((x - 3.0).abs < 1e-9 && (y - 4.0).abs < 1e-9, s"G1 to ($x, $y), expected (3, 4)")
+      case other => fail(s"expected a G1 command, got: $other")
+    }
+  }
+
+  test("cubic toGCode 02: quarter circle is a single G3 with the right center") {
+    // the standard Bezier quarter circle (Hermite tangent 4*tan(22.5deg) =
+    // 3 * (4/3)tan(22.5deg), the same construction as arcR1): it tracks the
+    // unit circle to within ~5.4e-4, well below the tolerance, so the whole
+    // curve must fit in one arc whose center is (to within the cubic's own
+    // approximation error) the origin.
+    val k = 4.0 * math.tan(math.Pi / 8) // = 1.6568542494923802
+    val q = CubicInterpolator(1, 0, 0, k, 0, 1, -k, 0)
+    val cmds = q.toGCode(confTol(1e-3))
+    assert(cmds.size == 1, s"expected a single arc, got ${cmds.size}: $cmds")
+    cmds(0) match {
+      case Command(CmdType.G, Seq(3), Seq(X(x), Y(y), I(i), J(j)), _, _) =>
+        // from (1,0) to (0,1), counter-clockwise, center at the origin
+        assert((x - 0.0).abs < 1e-9 && (y - 1.0).abs < 1e-9, s"end ($x, $y) != (0, 1)")
+        assert((i + 1.0).abs < 1e-4 && j.abs < 1e-4, s"I,J = ($i, $j) != (-1, 0)")
+      case other => fail(s"expected a G3 command, got: $other")
+    }
+  }
+
+  test("cubic toGCode 03: approximation stays within the tolerance (arc-ish and S-curve)") {
+    for (c <- Seq(
+      // quarter circle (one arc)
+      CubicInterpolator(1, 0, 0, 4.0 / 3.0, 0, 1, -4.0 / 3.0, 0),
+      // S-curve: horizontal-ish start and end tangents, wiggles below and above
+      // the chord (y(u) = -u(1-2u)(1-u))
+      CubicInterpolator(0, 0, 4, -1, 4, 0, 4, -1),
+      // a loop-ish pretzel that crosses the y-axis at u = 0.5
+      CubicInterpolator(0, 0, 1, 1, 0, 0, 1, -1)
+    )) {
+      val tol  = 1e-2
+      val cmds = c.toGCode(confTol(tol))
+      assert(cmds.nonEmpty, s"no commands for $c")
+      val path = pathOf(cmds, c(0.0))
+      assert(goodEnough(path(0.0), c(0.0)), s"path start ${path(0.0)} != ${c(0.0)}")
+      assert(goodEnough(path(1.0), c(1.0)), s"path end ${path(1.0)} != ${c(1.0)}")
+      val dev = maxDeviation(c, path, 2000)
+      assert(dev <= tol + 1e-6, s"max deviation $dev exceeds tolerance $tol for $c")
+    }
+  }
+
+  test("cubic toGCode 04: sagging half-circle cubic is approximated within tolerance") {
+    // cubic Hermite from (1,0) to (-1,0) with vertical tangents: it is NOT a
+    // good semicircle (it sags to y = 0.25 at u = 0.5), so the approximation
+    // must subdivide heavily to track the cubic (not the true circle).
+    val c = CubicInterpolator(1, 0, 0, 1, -1, 0, 0, -1)
+    val tol  = 1e-2
+    val cmds = c.toGCode(confTol(tol))
+    assert(cmds.size >= 2, s"expected multiple commands, got ${cmds.size}")
+    val path = pathOf(cmds, c(0.0))
+    assert(goodEnough(path(1.0), c(1.0)), s"path end ${path(1.0)} != ${c(1.0)}")
+    val dev = maxDeviation(c, path, 2000)
+    assert(dev <= tol + 1e-6, s"max deviation $dev exceeds tolerance $tol")
+  }
+
+  test("cubic toGCode 05: closed loop cubic terminates and returns to the start") {
+    // p(0) = p(1) = (0,0): the root chord is a point and the root arc fit
+    // degenerates (r = 0), so the subdivision must handle both.
+    val c = CubicInterpolator(0, 0, 1, 1, 0, 0, 1, -1)
+    val tol  = 1e-2
+    val cmds = c.toGCode(confTol(tol))
+    assert(cmds.nonEmpty, "no commands")
+    val path = pathOf(cmds, c(0.0))
+    assert(goodEnough(path(1.0), (0.0, 0.0)), s"path end ${path(1.0)} != (0, 0)")
+    val dev = maxDeviation(c, path, 1000)
+    assert(dev <= tol + 1e-6, s"max deviation $dev exceeds tolerance $tol")
+  }
+
+  test("cubic toGCode 06: generated code drives the machine to the curve's end") {
+    val q = CubicInterpolator(1, 0, 0, 4.0 / 3.0, 0, 1, -4.0 / 3.0, 0)
+    val cmds = q.toGCode(confTol(1e-3))
+    val m = new AbstractMachine
+    m.run(Empty(F(200)))
+    m.run(G(0, X(1), Y(0))) // position at the curve's start
+    for (c <- cmds) m.run(c)
+    assert((m.x - 0.0).abs < 1e-6 && (m.y - 1.0).abs < 1e-6, s"machine at (${m.x}, ${m.y}), expected (0, 1)")
+  }
+
+  test("cubic toPath 07: a line cubic becomes a single-segment path of one Line") {
+    val c = CubicInterpolator(0, 0, 3, 4, 3, 4, 3, 4)
+    val p = c.toPath(1e-6)
+    assert(p.children.size == 1, s"expected 1 segment, got ${p.children.size}")
+    p.children.head match {
+      case l: Line =>
+        assert(goodEnough(l.apply(0.0), (0.0, 0.0)), s"line start ${l.apply(0.0)} != (0, 0)")
+        assert(goodEnough(l.apply(1.0), (3.0, 4.0)), s"line end ${l.apply(1.0)} != (3, 4)")
+      case other => fail(s"expected a Line, got: $other")
+    }
+  }
+
+  test("cubic toPath 08: a quarter circle becomes a single-segment path of one Arc") {
+    val k = 4.0 * math.tan(math.Pi / 8) // Bezier quarter-circle tangent (see toGCode 02)
+    val q = CubicInterpolator(1, 0, 0, k, 0, 1, -k, 0)
+    val p = q.toPath(1e-3)
+    assert(p.children.size == 1, s"expected 1 segment, got ${p.children.size}")
+    p.children.head match {
+      case a: Arc =>
+        // counter-clockwise from (1,0) to (0,1); center and radius are correct
+        // to within the cubic's own approximation error of the unit circle
+        assert(a.ccw, "expected a counter-clockwise arc")
+        assert(a.a.abs < 1e-4 && a.b.abs < 1e-4, s"center (${a.a}, ${a.b}) != (0, 0)")
+        assert((a.r - 1.0).abs < 1e-4, s"radius ${a.r} != 1")
+        assert(goodEnough(a.apply(0.0), (1.0, 0.0)), s"arc start ${a.apply(0.0)} != (1, 0)")
+        assert(goodEnough(a.apply(1.0), (0.0, 1.0)), s"arc end ${a.apply(1.0)} != (0, 1)")
+      case other => fail(s"expected an Arc, got: $other")
+    }
+  }
+
+  test("cubic toPath 09: segments are only Line/Arc, connected, and within tolerance") {
+    for (c <- Seq(
+      CubicInterpolator(1, 0, 0, 4.0 / 3.0, 0, 1, -4.0 / 3.0, 0), // quarter circle
+      CubicInterpolator(0, 0, 4, -1, 4, 0, 4, -1),                // S-curve
+      CubicInterpolator(0, 0, 1, 1, 0, 0, 1, -1),                 // closed loop
+      CubicInterpolator(1, 0, 0, 1, -1, 0, 0, -1)                 // sagging half-circle
+    )) {
+      val tol = 1e-2
+      val p   = c.toPath(tol)
+      assert(p.children.nonEmpty, s"no segments for $c")
+      assert(p.children.forall(seg => seg.isInstanceOf[Line] || seg.isInstanceOf[Arc]),
+        s"non Line/Arc segment in ${p.children}")
+      // connected: each segment starts where the previous one ends
+      for (i <- 1 until p.children.size) {
+        assert(goodEnough(p.children(i).apply(0.0), p.children(i - 1).apply(1.0)),
+          s"segment $i starts at ${p.children(i).apply(0.0)} != end of segment ${i - 1} ${p.children(i - 1).apply(1.0)}")
+      }
+      assert(goodEnough(p.children.head.apply(0.0), c(0.0)), s"path start ${p.children.head.apply(0.0)} != curve start ${c(0.0)}")
+      assert(goodEnough(p.children.last.apply(1.0), c(1.0)), s"path end ${p.children.last.apply(1.0)} != curve end ${c(1.0)}")
+      val dev = maxDeviation(c, p, 2000)
+      assert(dev <= tol + 1e-6, s"max deviation $dev exceeds tolerance $tol for $c")
+    }
   }
 
 }

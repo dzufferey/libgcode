@@ -347,6 +347,11 @@ class Path(val children: IndexedSeq[AbsCurve]) extends Curve[Path] {
     children.flatMap(_.toGCode(config))
   }
 
+  // approximate every child, flattening the result back into one path of
+  // Lines and Arcs (a path of pure lines/arcs is returned unchanged)
+  def toPath(tolerance: Double): Path =
+    Path(children.flatMap(_.toPath(tolerance).children))
+
   // is convex / convex hull ?
 
 }

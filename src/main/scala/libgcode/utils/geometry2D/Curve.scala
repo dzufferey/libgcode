@@ -122,6 +122,14 @@ trait AbsCurve {
   // assumes the machine is at the start position and the feedrate is already set
   def toGCode(config: Config): Seq[Command]
 
+  /** Approximate this curve by a [[Path]] whose segments are only [[Line]] and
+    * [[Arc]], each segment staying within `tolerance` of the true curve.
+    * A [[Line]] or [[Arc]] is exact (it is returned wrapped in a one-segment
+    * path); a [[Path]] approximates each of its children; a
+    * [[CubicInterpolator]] subdivides adaptively.
+    */
+  def toPath(tolerance: Double): Path
+
   /** Returns the (approximate) distance between two curves.
     *
     * This works by sampling so it is not efficient!!
