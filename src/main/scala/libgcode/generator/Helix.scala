@@ -19,7 +19,7 @@ object Helix {
       offset: Double = 0,
       backToStart: Boolean = false,
       flatBottom: Boolean = false
-  )(implicit conf: Config) = {
+  )(using conf: Config) = {
     val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
     buffer += Empty.comment(s"Helix")
     val (a, b, c) = conf.toWorkplane(x, y, z)

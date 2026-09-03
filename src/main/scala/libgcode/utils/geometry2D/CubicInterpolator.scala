@@ -347,15 +347,16 @@ class CubicInterpolator(
     def hasCusp(lb: Double, ub: Double): Boolean = {
       val n    = 64
       var prev = 1 - x * curvature(lb)
-      if (prev.abs <= 1e-12) return true
-      for (i <- 1 to n) {
-        val u = lb + (ub - lb) * i / n
-        val v = 1 - x * curvature(u)
-        if (v.abs <= 1e-12) return true
-        if (v * prev < 0) return true
-        prev = v
+      var found = prev.abs <= 1e-12
+      if (!found) {
+        for (i <- 1 to n) {
+          val u = lb + (ub - lb) * i / n
+          val v = 1 - x * curvature(u)
+          found = v.abs <= 1e-12 || v * prev < 0
+          if (!found) prev = v
+        }
       }
-      false
+      found
     }
 
     def subdivide(lb: Double, ub: Double, depth: Int): List[CubicInterpolator] = {

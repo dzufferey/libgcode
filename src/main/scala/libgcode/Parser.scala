@@ -2,8 +2,6 @@ package libgcode
 
 import fastparse.*
 import SingleLineWhitespace.*
-import CmdType.CmdType
-import ParamType.ParamType
 
 object Parser {
 
@@ -16,24 +14,17 @@ object Parser {
   def integer[$: P]: P[Int] = P("-".? ~ integral).!.map(_.toInt)
   def real[$: P]: P[Double] = P("-".? ~ integral ~ fractional.?).!.map(_.toDouble)
 
-  private def isParam(c: Char) = {
-    try { ParamType.withName(c.toUpper.toString); true }
-    catch { case _: NoSuchElementException => false }
-  }
+  private def isParam(c: Char)   = ParamType.parse(c).isDefined
+  private def isCommand(c: Char) = CmdType.parse(c).isDefined
 
-  private def isCommand(c: Char) = {
-    try { CmdType.withName(c.toUpper.toString); true }
-    catch { case _: NoSuchElementException => false }
-  }
-
-  def paramType[$: P]: P[ParamType] = P(CharPred(isParam).!.map(c => ParamType.withName(c.toUpperCase)))
+  def paramType[$: P]: P[ParamType] = P(CharPred(isParam).!.map(c => ParamType.parse(c.charAt(0)).get))
 
   def realParam[$: P]: P[RealParam] = P(paramType.filter(RealParam.is) ~ real).map { case (a, b) => RealParam(a, b) }
   def intParam[$: P]: P[IntParam]   = P(paramType.filter(IntParam.is) ~ integer).map { case (a, b) => IntParam(a, b) }
   def paramT[$: P]: P[ParamT]       = P(paramType).map(a => ParamT(a))
   def param[$: P]: P[Param]         = P(realParam | intParam | paramT)
 
-  def cmdType[$: P]: P[CmdType] = P(CharPred(isCommand).!.map(c => CmdType.withName(c.toUpperCase)))
+  def cmdType[$: P]: P[CmdType] = P(CharPred(isCommand).!.map(c => CmdType.parse(c.charAt(0)).get))
 
   def line[$: P]: P[Int] = P(("N" | "n") ~ integer)
 
@@ -54,7 +45,7 @@ object Parser {
   }
   def cmds[$: P]: P[Seq[Command]] = P(cmd.rep(sep = eol).map(_.dropRight(1)) ~ End)
 
-  def apply(str: String): Seq[Command] = parse(str, cmds(_)) match {
+  def apply(str: String): Seq[Command] = parse(str, (c: ParsingRun[?]) => cmds(using c)) match {
     case Parsed.Success(cs, _) => cs
     case f @ Parsed.Failure(parser, _, _) =>
       sys.error("parsing failure: " + parser.toString + " with " + f.trace().longMsg)

@@ -57,7 +57,7 @@ object Slot {
   }
 
   def apply(x1: Double, y1: Double, z1: Double, x2: Double, y2: Double, z2: Double, radius: Double, depth: Double)(
-      implicit conf: Config
+      using conf: Config
   ) = {
     val (a1, b1, c1) = conf.toWorkplane(x1, y1, z1)
     val (a2, b2, c2) = conf.toWorkplane(x2, y2, z2)

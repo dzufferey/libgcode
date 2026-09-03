@@ -2,7 +2,7 @@ package libgcode.extractor
 
 import libgcode.{Command, Param, CmdType}
 
-class CmdExtractor(cmdType: CmdType.Value) {
+class CmdExtractor(cmdType: CmdType) {
 
   def unapply(c: Command): Option[(Int,Int,Seq[Param])] = c match {
     case Command(cmdT, Seq(code1), parameters, _, _) if cmdT == cmdType => Some((code1, 0, parameters))

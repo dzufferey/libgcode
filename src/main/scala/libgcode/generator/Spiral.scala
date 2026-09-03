@@ -36,7 +36,7 @@ object Spiral {
       radius: Double,
       insideOut: Boolean = true,
       offset: Double = 0.0
-  )(implicit conf: Config) = {
+  )(using conf: Config) = {
     // compute the width of the cut so we are doing full turns
     val maxEffectiveRadius = radius - conf.endmillRadius
     val nTurn              = (maxEffectiveRadius / conf.widthOfCut).ceil.toInt
@@ -109,8 +109,8 @@ object Spiral {
       radius: Double,
       insideOut: Boolean = true,
       offset: Double = 0.0
-  )(implicit conf: Config) = {
-    roughing(x, y, z, radius, insideOut, offset)(conf)
+  )(using conf: Config) = {
+    roughing(x, y, z, radius, insideOut, offset)
   }
 
   def apply(
@@ -120,15 +120,15 @@ object Spiral {
       radius: Double,
       insideOut: Boolean = true,
       offset: Double = 0.0
-  )(implicit conf: Config) = {
+  )(using conf: Config) = {
     if (conf.finishingPass > 0.0) {
       val (a, b, c)    = conf.toWorkplane(x, y, z)
       val (x2, y2, z2) = conf.fromWorkplane(a, b, c + conf.finishingPass)
-      val rough        = roughing(x2, y2, z2, radius - conf.finishingPass, insideOut, offset)(conf)
-      val finish       = finishing(x, y, z, radius, insideOut, offset)(conf)
+      val rough        = roughing(x2, y2, z2, radius - conf.finishingPass, insideOut, offset)
+      val finish       = finishing(x, y, z, radius, insideOut, offset)
       rough ++ finish
     } else {
-      roughing(x, y, z, radius, insideOut, offset)(conf)
+      roughing(x, y, z, radius, insideOut, offset)
     }
   }
 

@@ -95,7 +95,7 @@ object Contour {
       c: Double, // z if working in the XY plane
       inside: Boolean = false,
       tolerance: Double = 1e-6
-  )(implicit conf: Config): Seq[Command] = {
+  )(using conf: Config): Seq[Command] = {
     val p  = path(pointsAndRadii, tolerance)
     val p2 = if (inside) p.offset(-conf.endmillRadius) else p.offset(conf.endmillRadius)
     val p3 = if (inside == conf.climb) p2 else p2.flip

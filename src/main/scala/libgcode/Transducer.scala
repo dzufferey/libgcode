@@ -39,7 +39,7 @@ trait Transducer {
     var line: String = input.readLine()
     while (line != null) {
       read += 1
-      parse(line.trim, Parser.cmd(_)) match {
+      parse(line.trim, (c: ParsingRun[?]) => Parser.cmd(using c)) match {
         case Parsed.Success(c, _) =>
           val cs = transform(c)
           written += cs.length

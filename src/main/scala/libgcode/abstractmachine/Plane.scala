@@ -1,6 +1,5 @@
 package libgcode.abstractmachine
 
-object Plane extends Enumeration {
-  type Plane = Value
-  val XY, ZX, YZ = Value
+enum Plane {
+  case XY, ZX, YZ
 }

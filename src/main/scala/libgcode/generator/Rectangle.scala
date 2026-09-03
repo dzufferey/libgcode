@@ -28,7 +28,7 @@ object Rectangle {
       length: Double,
       depth: Double,
       inside: Boolean = true
-  )(implicit conf: Config) = {
+  )(using conf: Config) = {
     // TODO: currently ignores the finishing pass!
     assert(
       conf.workingPlane == Plane.XY,
@@ -54,7 +54,7 @@ object Rectangle {
       inside: Boolean = true,
       backToStart: Boolean = true,
       _buffer: AbstractBuffer[Command] = null
-  )(implicit conf: Config) = {
+  )(using conf: Config) = {
     assert(!inside || width >= conf.endmillDiameter)
     assert(!inside || length >= conf.endmillDiameter)
     assert(depth >= 0.0, "depth should be positive")

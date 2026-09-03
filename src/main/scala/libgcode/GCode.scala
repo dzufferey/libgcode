@@ -4,14 +4,19 @@ import java.math.RoundingMode
 import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.util.Locale
 
-object CmdType extends Enumeration {
-  type CmdType = Value
-  val G, M, O, Empty = Value // Empty means it is a comment or changing some parameter like the feed without moving
+// Empty means it is a comment or changing some parameter like the feed without moving
+enum CmdType {
+  case G, M, O, Empty
+}
+object CmdType {
+  def parse(c: Char): Option[CmdType] = values.find(_.toString.equalsIgnoreCase(c.toString))
 }
 
-object ParamType extends Enumeration {
-  type ParamType = Value
-  val A, B, C, D, E, F, H, I, J, K, L, P, Q, R, S, T, X, Y, Z = Value
+enum ParamType {
+  case A, B, C, D, E, F, H, I, J, K, L, P, Q, R, S, T, X, Y, Z
+}
+object ParamType {
+  def parse(c: Char): Option[ParamType] = values.find(_.toString.equalsIgnoreCase(c.toString))
 }
 
 import CmdType.*

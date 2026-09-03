@@ -17,7 +17,7 @@ object Hole {
       depth: Double,
       insideOut: Boolean = true,
       depthFirst: Boolean = true
-  )(implicit conf: Config) = {
+  )(using conf: Config) = {
     val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
     buffer += Empty.comment(s"Hole (roughing)")
 
@@ -111,7 +111,7 @@ object Hole {
       depth: Double,
       insideOut: Boolean = true,
       depthFirst: Boolean = true
-  )(implicit conf: Config) = {
+  )(using conf: Config) = {
     val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
     buffer += Empty.comment(s"Hole (finishing)")
 
@@ -150,16 +150,16 @@ object Hole {
       depth: Double,
       insideOut: Boolean = true,
       depthFirst: Boolean = true
-  )(implicit conf: Config) = {
+  )(using conf: Config) = {
     val buffer = scala.collection.mutable.ArrayBuffer.empty[Command]
     buffer += Empty.comment(s"Hole")
     if (conf.finishingPass > 0.0) {
       val rough =
-        roughing(x, y, z, radius - conf.finishingPass, depth - conf.finishingPass, insideOut, depthFirst)(conf)
-      val finish = finishing(x, y, z, radius, depth, insideOut, depthFirst)(conf)
+        roughing(x, y, z, radius - conf.finishingPass, depth - conf.finishingPass, insideOut, depthFirst)
+      val finish = finishing(x, y, z, radius, depth, insideOut, depthFirst)
       rough ++ finish
     } else {
-      roughing(x, y, z, radius, depth, insideOut, depthFirst)(conf)
+      roughing(x, y, z, radius, depth, insideOut, depthFirst)
     }
   }
 

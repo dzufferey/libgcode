@@ -2,7 +2,7 @@ package libgcode.extractor
 
 import libgcode.{Command, Param, ParamType, IntParam, RealParam}
 
-class IntParamExtractor(paramType: ParamType.Value) {
+class IntParamExtractor(paramType: ParamType) {
 
   def unapply(p: Param): Option[Int] = p match {
     case IntParam(pt, v) if pt == paramType => Some(v)
@@ -13,7 +13,7 @@ class IntParamExtractor(paramType: ParamType.Value) {
 
 }
 
-class RealParamExtractor(paramType: ParamType.Value) {
+class RealParamExtractor(paramType: ParamType) {
 
   def unapply(p: Param): Option[Double] = p match {
     case RealParam(pt, v) if pt == paramType => Some(v)

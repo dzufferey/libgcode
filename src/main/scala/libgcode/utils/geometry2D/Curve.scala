@@ -115,7 +115,7 @@ trait AbsCurve {
   def intersect(c: AbsCurve, ignoreBounds: Boolean = false, tolerance: Double = 1e-6): Seq[(Double, Double)]
 
   // simple curve are C2, path can have lesser continuity
-  def continuity(tolerance: Double = 1e-6): Continuity.Continuity = {
+  def continuity(tolerance: Double = 1e-6): Continuity = {
     Continuity.C2
   }
 

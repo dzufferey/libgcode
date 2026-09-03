@@ -1,16 +1,16 @@
 package libgcode.utils.geometry2D
 
-object Continuity extends Enumeration {
-
-  type Continuity = Value
-  /** Continuity as in https://dev.opencascade.org/doc/overview/html/occt_user_guides__modeling_data.html#occt_modat_4_2a
-   * - C0: continuous
-   * - G1: C0 + colinear derivative
-   * - C1: C0 + same derivative
-   * - G2: G1 + same centerOfCurvature
-   * - C2: C1 + same centerOfCurvature
-   */
-  val C0, G1, C1, G2, C2 = Value
+/** Continuity as in https://dev.opencascade.org/doc/overview/html/occt_user_guides__modeling_data.html#occt_modat_4_2a
+ * - C0: continuous
+ * - G1: C0 + colinear derivative
+ * - C1: C0 + same derivative
+ * - G2: G1 + same centerOfCurvature
+ * - C2: C1 + same centerOfCurvature
+ */
+enum Continuity {
+  case C0, G1, C1, G2, C2
+}
+object Continuity {
 
   def level(c: Continuity): Int = c match {
     case C0 => 0

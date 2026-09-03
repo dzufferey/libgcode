@@ -15,7 +15,7 @@ class NormalizeCoordinates(
     initA: Double,
     initB: Double,
     initC: Double,
-    initP: Plane.Plane
+    initP: Plane
 ) extends AbstractMachine
     with Transducer {
 
@@ -59,7 +59,7 @@ class NormalizeCoordinates(
     }
     cmd match {
       case G(motion @ (0 | 1 | 2 | 3 | 92), 0, params) =>
-        Seq(G(motion, params.map(mapParam): _*).replaceComment(cmd.comment))
+        Seq(G(motion, params.map(mapParam)*).replaceComment(cmd.comment))
       case G(20 | 21 | 90 | 91, 0, Seq()) =>
         if (cmd.comment.isEmpty) Seq()
         else Seq(Command(CmdType.Empty, Seq(), Seq(), None, cmd.comment))

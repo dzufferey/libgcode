@@ -8,14 +8,14 @@ class ParserTest extends AnyFunSuite {
 
   val path = "src/test/resources/"
 
-  def ok(p: P[_] => P[Any], str: String) = {
+  def ok(p: P[?] => P[Any], str: String) = {
     parse(str, p) match {
       case Parsed.Success(v, _) => ()
       case other                => sys.error(other.toString)
     }
   }
 
-  def check[A](p: P[_] => P[A], str: String, a: A) = {
+  def check[A](p: P[?] => P[A], str: String, a: A) = {
     parse(str, p) match {
       case Parsed.Success(v, _) => assert(v == a)
       case other                => sys.error(other.toString)
@@ -23,20 +23,20 @@ class ParserTest extends AnyFunSuite {
   }
 
   test("chunks") {
-    check(Parser.cmdType(_), "G", CmdType.G)
-    check(Parser.cmdType(_), "g", CmdType.G)
-    check(Parser.cmdType(_), "M", CmdType.M)
-    check(Parser.cmdType(_), "m", CmdType.M)
-    check(Parser.cmdType(_), "O", CmdType.O)
-    check(Parser.cmdType(_), "o", CmdType.O)
-    check(Parser.code(_), "G28", (CmdType.G, scala.collection.mutable.ArrayBuffer(28)))
-    check(Parser.code(_), "M104", (CmdType.M, scala.collection.mutable.ArrayBuffer(104)))
-    check(Parser.line(_), "n04", 4)
-    check(Parser.lineComment(_), "; home all axes", "home all axes")
-    check(Parser.comment(_), "; home all axes", "home all axes")
-    ok(Parser.comment(_), "; home all axes")
-    ok(Parser.comment(_), "   ; home all axes")
-    ok(Parser.cmd(_), "")
+    check((c: ParsingRun[?]) => Parser.cmdType(using c), "G", CmdType.G)
+    check((c: ParsingRun[?]) => Parser.cmdType(using c), "g", CmdType.G)
+    check((c: ParsingRun[?]) => Parser.cmdType(using c), "M", CmdType.M)
+    check((c: ParsingRun[?]) => Parser.cmdType(using c), "m", CmdType.M)
+    check((c: ParsingRun[?]) => Parser.cmdType(using c), "O", CmdType.O)
+    check((c: ParsingRun[?]) => Parser.cmdType(using c), "o", CmdType.O)
+    check((c: ParsingRun[?]) => Parser.code(using c), "G28", (CmdType.G, scala.collection.mutable.ArrayBuffer(28)))
+    check((c: ParsingRun[?]) => Parser.code(using c), "M104", (CmdType.M, scala.collection.mutable.ArrayBuffer(104)))
+    check((c: ParsingRun[?]) => Parser.line(using c), "n04", 4)
+    check((c: ParsingRun[?]) => Parser.lineComment(using c), "; home all axes", "home all axes")
+    check((c: ParsingRun[?]) => Parser.comment(using c), "; home all axes", "home all axes")
+    ok((c: ParsingRun[?]) => Parser.comment(using c), "; home all axes")
+    ok((c: ParsingRun[?]) => Parser.comment(using c), "   ; home all axes")
+    ok((c: ParsingRun[?]) => Parser.cmd(using c), "")
   }
 
   test("eol variants") {
