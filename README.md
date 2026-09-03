@@ -10,14 +10,20 @@ There are limitations to the kind of gcode can be parsed/represented.
 Currently, modal commands not supported.
 See "ToDo" below for more details.
 
-## Using libgcode with Jupyter
+## Viewing the results
 
-This is the way I'm currently using it.
+A simple G-Code viewer that can be used is [nc_viewer](https://github.com/dzufferey/nc_viewer).
+It can watch files and automatically refresh the view when the file changes.
+So the recommended workflow is to have a program which saves the result in a file and watch that file with the viewer.
 
-1. [install Jupyter](https://jupyter.org/install)
-2. [install Almond](https://almond.sh/docs/quick-start-install)
-3. run `sbt publishLocal` in this folder
-4. open the file [notebook/samples.ipynb](notebook/samples.ipynb) in Jupyter to see examples
+```sh
+cd nc_viewer
+npm install
+npm start -- my-program.nc
+```
+
+The [examples](examples/README.md) folder contains a few programs that
+save the result in a file, ready to be watched this way.
 
 ## ToDo
 

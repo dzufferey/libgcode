@@ -1,7 +1,7 @@
 package libgcode
 
 import org.scalatest.funsuite.AnyFunSuite
-import dzufferey.utils.IO
+import java.nio.file.*
 import fastparse.*
 
 class ParserTest extends AnyFunSuite {
@@ -39,12 +39,21 @@ class ParserTest extends AnyFunSuite {
     ok(Parser.cmd(_), "")
   }
 
+  test("eol variants") {
+    // same commands parsed from LF, CRLF and CR line endings
+    val lf   = Parser("G21\nG90\nG1 X10\n")
+    val crlf = Parser("G21\r\nG90\r\nG1 X10\r\n")
+    val cr   = Parser("G21\rG90\rG1 X10\r")
+    assert(lf == crlf)
+    assert(lf == cr)
+  }
+
   def expectedNbrLineLoop(fName: String, n: Int, compareReparsed: Boolean = true) = {
-    val raw      = IO.readTextFile(path + fName)
+    val raw      = Files.readString(Path.of(path + fName))
     val commands = Parser(raw)
     assert(commands.size == n)
     val printed = Printer(commands)
-    // IO.writeInFile("temp.txt", printed)
+    // Files.writeString(Path.of("temp.txt"), printed)
     val reparsed = Parser(printed)
     assert(reparsed.size == n)
     if (compareReparsed) {
@@ -55,7 +64,7 @@ class ParserTest extends AnyFunSuite {
   }
 
   def expectedNbrLine(fName: String, n: Int) = {
-    val raw      = IO.readTextFile(path + fName)
+    val raw      = Files.readString(Path.of(path + fName))
     val commands = Parser(raw)
     assert(commands.size == n)
   }

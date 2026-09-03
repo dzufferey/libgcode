@@ -2,7 +2,6 @@ package libgcode.generator
 
 import libgcode.*
 import libgcode.extractor.*
-import libgcode.utils.Viewer
 import libgcode.abstractmachine.Plane
 import java.io.*
 import java.nio.file.*
@@ -33,8 +32,6 @@ abstract class Program(val conf: Config) {
   def save(fileName: String, printer: (Seq[Command], String) => Unit = Printer.apply) = {
     printer(program, fileName)
   }
-
-  def display = Viewer.display(program)
 
   override def toString = {
     val writer = new StringWriter

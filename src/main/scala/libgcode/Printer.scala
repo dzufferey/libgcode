@@ -1,7 +1,7 @@
 package libgcode
 
 import java.io.*
-import dzufferey.utils.IO
+import java.nio.file.*
 
 class Printer(
     prefix: Option[String],
@@ -88,7 +88,10 @@ object Printer {
   }
 
   def apply(cmds: Seq[Command], fileName: String): Unit = {
-    IO.writeInFile(fileName, (b: BufferedWriter) => apply(cmds, b))
+    val path = Path.of(fileName)
+    val b    = Files.newBufferedWriter(path)
+    try apply(cmds, b)
+    finally b.close()
   }
 
   def apply(cmds: Seq[Command], out: BufferedWriter): Unit = {
@@ -105,7 +108,10 @@ object Printer {
   }
 
   def rolandDG(cmds: Seq[Command], fileName: String): Unit = {
-    IO.writeInFile(fileName, (b: BufferedWriter) => rolandDG(cmds, b))
+    val path = Path.of(fileName)
+    val b    = Files.newBufferedWriter(path)
+    try rolandDG(cmds, b)
+    finally b.close()
   }
 
   def rolandDG(cmds: Seq[Command], out: BufferedWriter): Unit = {

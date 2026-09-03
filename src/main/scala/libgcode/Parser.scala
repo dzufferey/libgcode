@@ -7,7 +7,8 @@ import ParamType.ParamType
 
 object Parser {
 
-  private def eol[$: P] = P("\n\r" | "\n" | "\r")
+  // line endings: CRLF, CR, LF; CRLF must come first
+  private def eol[$: P] = P("\r\n" | "\n" | "\r")
 
   private def integral[$: P]   = P(CharIn("0-9").rep(1))
   private def fractional[$: P] = P("." ~ integral)
